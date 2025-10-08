@@ -16,6 +16,7 @@ pub const DECK_SECP256K1: &'static SortedDeck<ark_secp256k1::Affine> =
 pub const DECK: &'static [Plaintext<ark_secp256k1::Projective>] =
     cards_deck::cast_deck(deck_secp256k1::DECK_SECP256K1);
 
+// Comment out this line briefly when changing deck size.  Latex style!
 pub use deck_secp256k1::PARAMS_SECP256K1 as PARAMS;
 
 
@@ -49,8 +50,8 @@ mod tests {
     #[test]
     fn deck_secp256k1() {
         let mut rng = ark_transcript::Transcript::new_labeled(b"Peer3 secp256k1 card deck")
-            .challenge(b"52 cards - poker");
-        let deck = SortedDeck::<ark_secp256k1::Affine>::from_rng(52, &mut rng);
+            .challenge(b"200 cards");
+        let deck = SortedDeck::<ark_secp256k1::Affine>::from_rng(200, &mut rng);
 
         let mut w = open_fresh("deck_secp256k1.rs");
         deck.to_code(&mut w, "DECK_SECP256K1").expect("Write failed");
@@ -58,7 +59,7 @@ mod tests {
         assert_eq!(deck.0, crate::DECK_SECP256K1.0);
 
         // #[cfg(feature = "cards-protocol")] { .. }
-        cards_protocol::Parameters::<ark_secp256k1::Projective>::setup(&mut rng, 52)
+        cards_protocol::Parameters::<ark_secp256k1::Projective>::setup(&mut rng, 200)
             .to_code(&mut w, "PARAMS_SECP256K1")
             .expect("Write failed");
     }
