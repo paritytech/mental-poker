@@ -1,0 +1,23 @@
+[package]
+name = "cards-deck"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+# readme = "README.md"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+
+ark-ec.workspace = true
+ark-ff.workspace = true
+
+ark-serialize.workspace = true
+ark-std.workspace = true
+
+cards-proofs = { workspace = true, optional = true }
+
+[features]
+default = ["std", "cards-proofs"]
+std = ["ark-std/std", "ark-ec/std", "ark-ff/std", "ark-serialize/std"] # "cards-proofs/std"

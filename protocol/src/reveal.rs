@@ -1,0 +1,337 @@
+
+use crate::{
+    CanonicalSerialize,CanonicalDeserialize,SerializationError,
+    UnmaskedCard, MaskedCard,
+    keys::*,
+    error::CardProtocolError
+};
+
+use ark_ec::{AffineRepr,CurveGroup};
+use ark_std::{vec::Vec, rand::{Rng,CryptoRng}, Zero}; // io::{self,Write}
+
+use cards_proofs::{
+    error::CryptoError,
+    homomorphic_encryption::el_gamal,
+    zkp::{
+        proofs::chaum_pedersen_dl_equality,
+        ArgumentOfKnowledge,
+    },
+};
+
+
+/// A `RevealToken` is computed by players when they wish to reveal a given card.
+/// These tokens can then be aggregated to reveal the card.
+///
+/// TODO:  But why use `el_gamal::Plaintext` here?
+pub type RevealToken<C> = el_gamal::Plaintext<C>;
+
+pub type ZKProofReveal<C> = chaum_pedersen_dl_equality::proof::Proof<C>;
+
+const REVEAL_RNG_SEED: &'static [u8] = b"Reveal Proof";
+
+pub fn reveal_unchecked<C: CurveGroup>(
+    token: &RevealToken<C>,
+    cipher: &MaskedCard<C>,
+) -> UnmaskedCard<C> {
+    let decrypted = cipher.1 - token.0;
+    el_gamal::Plaintext(decrypted.into_affine())
+}
+
+pub fn update_masked_card<C: CurveGroup>(mc: &mut MaskedCard<C>, token: &RevealToken<C>) {
+    let new = mc.1 - token.0;
+    mc.1 = new.into_affine();
+}
+
+/// Find the card in a deck.
+pub fn card_position<C: CurveGroup>(deck: &[UnmaskedCard<C>], card: &UnmaskedCard<C>) -> Result<usize,CardProtocolError> {
+    if card.0.is_zero() {
+        return Err(CardProtocolError::ZeroCard)
+    }
+    // TODO Make decks sorted
+    // point_binary_search(&deck,&rc).map_err(|_| CardProtocolError::UnrecognizedCard)
+    deck.iter().position(|dc| dc==card)
+    // We have a dedicate error because this could be used in several places.
+    // so WrongGame("Unrecognized card in eviction") fits poorly.
+    .ok_or(CardProtocolError::UnrecognizedCard)
+}
+
+pub fn reveal_position<C: CurveGroup>(
+    deck: &[UnmaskedCard<C>],
+    masked_card: &MaskedCard<C>,
+    revel_token: &RevealToken<C>,
+) -> Result<usize,CardProtocolError> {
+    let rc = reveal_unchecked(revel_token,masked_card);
+    card_position(deck,&rc)
+}
+
+/// Reveals and proves the signer's `RevealToken` for a masked card.
+///
+/// Accumulate these from all signers to provably reveal the card.
+#[derive(Clone,CanonicalSerialize,CanonicalDeserialize,Debug)]
+pub struct RevealTnP<C: CurveGroup> {
+    pub token: RevealToken<C>,
+    pub proof: ZKProofReveal<C>,
+}
+
+/// Reveals and proves the signer's `RevealToken` for a masked card.
+/// Accumulate these from all signers to provably reveal the card.
+/// 
+/// `RevealMessage`s contain their own self signature.
+#[derive(Clone,CanonicalSerialize,CanonicalDeserialize,Debug)]
+pub struct RevealMessage<C: CurveGroup> {
+    pub pk: PlayerPublicKey<C>,
+    pub masked_card: MaskedCard<C>,
+    pub tp: RevealTnP<C>,
+}
+
+impl<C: CurveGroup> core::ops::Deref for RevealMessage<C> {
+    type Target = RevealTnP<C>;
+    fn deref(&self) -> &RevealTnP<C> { &self.tp }
+}
+impl<C: CurveGroup> core::ops::DerefMut for RevealMessage<C> {
+    fn deref_mut(&mut self) -> &mut RevealTnP<C> { &mut self.tp }
+}
+
+impl<C: CurveGroup> PlayerKeypair<C> {
+    pub fn compute_reveal_token(&self, masked_card: &MaskedCard<C>) -> RevealToken<C> {
+        el_gamal::Plaintext(masked_card.0.into().mul(self.sk).into_affine())
+    }
+
+    // pub fn mask_from_sk(&self, masked_card: &MaskedCard<C>) -> MaskedCard<C> {
+    //     el_gamal::Cipertext(masked_card.0, self.compute_reveal_token(masked_card).0);
+    // }
+}
+
+impl<C: CurveGroup> crate::Parameters<C> {
+    pub fn prove_reveal<R: Rng+CryptoRng>(
+        &self,
+        rng: &mut R,
+        key: &PlayerKeypair<C>,
+        masked_card: &MaskedCard<C>,
+    ) -> RevealTnP<C> {
+        let token: RevealToken<C> = key.compute_reveal_token(masked_card);
+
+        // Map to Chaum-Pedersen parameters
+        let cp_parameters = chaum_pedersen_dl_equality::Parameters::new(
+            &masked_card.0,
+            &self.enc_parameters.generator,
+        );
+
+        // Map to Chaum-Pedersen parameters
+        let cp_statement = chaum_pedersen_dl_equality::Statement::new(&token.0, &key.pk);
+
+        let proof = chaum_pedersen_dl_equality::DLEquality::prove(
+            rng,
+            &cp_parameters,
+            &cp_statement,
+            &key.sk,
+            REVEAL_RNG_SEED,
+        ).expect("Infallible prover");
+
+        RevealTnP { token, proof }
+    }
+
+    pub fn verify_reveal<'a>(
+        &self,
+        pk: &PlayerPublicKey<C>,
+        reveal: &'a RevealTnP<C>,
+        masked_card: &MaskedCard<C>,
+    ) -> Result<&'a RevealToken<C>, CryptoError> {
+        // Map to Chaum-Pedersen parameters
+        let cp_parameters = chaum_pedersen_dl_equality::Parameters::new(
+            &masked_card.0,
+            &self.enc_parameters.generator,
+        );
+
+        // Map to Chaum-Pedersen parameters
+        let cp_statement = chaum_pedersen_dl_equality::Statement::new(&reveal.token.0, pk);
+
+        chaum_pedersen_dl_equality::DLEquality::verify(
+            &cp_parameters,
+            &cp_statement,
+            &reveal.proof,
+            REVEAL_RNG_SEED,
+        )?;
+
+        Ok(&reveal.token)
+    }
+
+    pub fn prove_single_reveal_token<R: Rng+CryptoRng>(
+        &self,
+        rng: &mut R,
+        key: &PlayerKeypair<C>,
+        masked_card: &MaskedCard<C>,
+    ) -> RevealMessage<C> {
+        let tp = self.prove_reveal(rng,key,masked_card);
+        RevealMessage { pk: key.pk.clone(), masked_card: masked_card.clone(), tp, }
+    }
+
+    pub fn verify_single_reveal<'a>(
+        &self,
+        reveal: &'a RevealMessage<C>,
+    ) -> Result<MaskedCard<C>,CryptoError> {
+        self.verify_reveal(&reveal.pk,&reveal.tp,&reveal.masked_card)?;
+        let mut masked_card = reveal.masked_card.clone();
+        update_masked_card(&mut masked_card, &reveal.token);
+        Ok(masked_card)
+    }
+
+    pub fn unmask(
+        &self,
+        decryption_messages: &[RevealMessage<C>],
+        masked_card: &MaskedCard<C>,
+    ) -> Result<UnmaskedCard<C>, CardProtocolError> {
+        let mut aggregate_token = RevealToken::<C>::zero();
+        for reveal_message in decryption_messages {
+            if masked_card != &reveal_message.masked_card {
+                return Err(CardProtocolError::WrongCard);
+            }
+            self.verify_single_reveal(reveal_message)?;
+            aggregate_token = aggregate_token + reveal_message.token;
+        }
+        Ok(reveal_unchecked(&aggregate_token,masked_card))
+    }
+}
+
+impl<'p,C: CurveGroup>  AggregatedPublicKeys<'p,C> {
+    pub fn accumulate_reveals(&self, masked_card: MaskedCard<C>) -> AccumulateReveals<'p,C> {
+        AccumulateReveals {
+            parameters: self.parameters(),
+            remaining_key: self.aggregate_key().into_group(),
+            masked_card,
+            token: RevealToken::<C>::zero(),
+        }
+    }
+}
+
+/// Verify and accumulate `RevealMessage`s
+///
+#[derive(Clone)]
+pub struct AccumulateReveals<'p,C: CurveGroup> {
+    pub(crate) parameters: &'p crate::Parameters<C>,
+    pub(crate) remaining_key: C,
+    pub(crate) masked_card: MaskedCard<C>,
+    pub(crate) token: RevealToken<C>,
+}
+
+impl<'p,C: CurveGroup>  AccumulateReveals<'p,C> {
+    pub fn parameters(&self) -> &'p crate::Parameters<C> { self.parameters }
+    pub fn remaining_key(&self) -> &C { &self.remaining_key }
+    pub fn masked_card(&self) -> &MaskedCard<C> { &self.masked_card }
+    pub fn token(&self) -> &RevealToken<C> { &self.token }
+
+    pub fn add_reveal(&mut self, reveal_message: &RevealMessage<C>) -> Result<(), CardProtocolError> {
+        if self.masked_card != reveal_message.masked_card {
+            return Err(CardProtocolError::WrongCard);
+        }
+        self.parameters.verify_single_reveal(reveal_message)?;
+        self.token = self.token + reveal_message.token;
+        self.remaining_key = self.remaining_key - reveal_message.pk;
+        Ok(())
+    }
+
+    /// Returns the remaining aggregate publickey and remaining ciphertext.
+    ///    
+    /// If the remaining aggregate publickey passes `.is_zero()` then
+    /// the remaining ciphertext converts to
+    pub fn status(&self) -> (AggregatePublicKey<C>,MaskedCard<C>) {
+        let mut masked_card = self.masked_card.clone();
+        update_masked_card(&mut masked_card,&self.token);
+        (self.remaining_key.into_affine(),masked_card)
+    }
+
+    pub fn is_completed(&self) -> bool { self.remaining_key.is_zero() }
+
+    pub fn completed(&self) -> Option<UnmaskedCard<C>> {
+        if !self.is_completed() { return None; }
+        Some(reveal_unchecked(&self.token,&self.masked_card))
+    }
+
+    pub fn is_completed_for(&self, pk: &PlayerPublicKey<C>) -> bool {
+        self.remaining_key == pk.into_group()
+    }
+
+    pub fn completed_for(&self, pk: &PlayerPublicKey<C>) -> Option<MaskedCard<C>> {
+        let status = self.status();
+        if &status.0 != pk { return None; }        
+        Some(status.1)
+    }
+
+    /// If `c = C::compressed_size()`, often 32 bytes, then
+    /// `AccumulateReveals` serializes in `4 c` bytes.
+    pub fn serialized_size(&self) -> usize {
+        self.remaining_key.compressed_size()
+        + self.masked_card.compressed_size()
+        + self.token.compressed_size()
+    }
+
+    pub fn serialize<W: ark_std::io::Write>(&self, mut w: W) -> Result<(), SerializationError> {
+        self.remaining_key.serialize_compressed(&mut w)?;
+        self.masked_card.serialize_compressed(&mut w)?;
+        self.token.serialize_compressed(&mut w)
+    }
+
+    /// Deserialize `AggregatedPublicKeys` from a serialized `Vec<PlayerPublicKey<C>>`,
+    /// without checking anything.
+    pub fn deserialize<R: ark_std::io::Read>(mut r: R, parameters: &'p crate::Parameters<C>) -> Result<AccumulateReveals<'p,C>,SerializationError> {
+        Ok(AccumulateReveals {
+            parameters,
+            remaining_key: CanonicalDeserialize::deserialize_compressed(&mut r)?,
+            masked_card: CanonicalDeserialize::deserialize_compressed(&mut r)?,
+            token: CanonicalDeserialize::deserialize_compressed(&mut r)?,
+        })
+    }
+}
+
+/// Reveals and proves the signer's `RevealToken`s for a batch of masked card.
+/// Accumulate these from all signers to provably reveal the card.
+/// 
+/// `RevealBatch`s contain their own self signature.
+/// TODO:  Use batch proving or verification.
+#[derive(Clone,CanonicalSerialize,CanonicalDeserialize)]
+pub struct RevealBatch<C: CurveGroup> {
+    pub pk: PlayerPublicKey<C>,
+    pub set: Vec<RevealTnP<C>>,
+}
+
+// TODO:  Use batch proving and verification, except that ETH would be
+// simpler not using batch verification.
+impl<C: CurveGroup> crate::Parameters<C> {
+    /// Create the player's reveal proof a batch of masked cards
+    pub fn prove_reveals_batch<'a,R: Rng+CryptoRng>(
+        &self,
+        rng: &mut R,
+        key: &PlayerKeypair<C>,
+        masked_cards: impl IntoIterator<Item=&'a MaskedCard<C>>,
+    ) -> RevealBatch<C> {
+        let set = masked_cards.into_iter()
+        .map(|mc| self.prove_reveal(rng,key,mc)).collect();
+        RevealBatch { pk: key.pk.clone(), set }
+    }
+
+    /// Create a player's reveal proof a batch of masked cards
+    pub fn verify_reveals_batch<'a>(
+        &self,
+        reveals: &'a RevealBatch<C>,
+        masked_cards: impl IntoIterator<Item=&'a MaskedCard<C>>,
+    ) -> Result<(), CryptoError> {
+        let RevealBatch { pk, set } = reveals;
+        for (tp,mc) in set.iter().zip(masked_cards) {
+            self.verify_reveal(pk,tp,mc)?;
+        }
+        Ok(())
+    }
+
+    pub fn verify_batch_n_partial_unmasks<'a>(
+        &self,
+        reveals: &'a RevealBatch<C>,
+        masked_cards: &'a mut [MaskedCard<C>],
+    ) -> Result<(), CryptoError> {
+        self.verify_reveals_batch(reveals,&*masked_cards)?;
+        for (tp,mc) in reveals.set.iter().zip(masked_cards) {
+            update_masked_card(mc,&tp.token);
+        }
+        Ok(())
+    }
+}
+

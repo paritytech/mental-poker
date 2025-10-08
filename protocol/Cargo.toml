@@ -1,0 +1,35 @@
+[package]
+name = "cards-protocol"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+readme = "README.md"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+
+ark-ec.workspace = true
+ark-ff.workspace = true
+ark-serialize.workspace = true
+ark-std.workspace = true
+
+ark-transcript.workspace = true
+thiserror.workspace = true
+
+cards-proofs.workspace = true
+cards-deck.workspace = true
+
+[dev-dependencies]
+rand.workspace = true
+ark-secp256k1.workspace = true
+byte-unit = "4.0.14"
+anyhow = "1.0.55"
+
+[features]
+default = ["std"]
+std = ["ark-std/std", "ark-ec/std", "ark-ff/std", "ark-serialize/std"]
+
+[[example]]
+name = "round"

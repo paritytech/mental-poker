@@ -1,0 +1,33 @@
+[package]
+name = "deck-secp256k1"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+# readme = "README.md"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+
+ark-ec.workspace = true
+ark-ff.workspace = true
+ark-secp256k1.workspace = true
+
+# ark-serialize.workspace = true
+# ark-std.workspace = true
+
+cards-proofs.workspace = true
+cards-protocol.workspace = true
+cards-deck = { workspace = true, features = [ "cards-proofs" ] }
+
+[dev-dependencies]
+ark-transcript.workspace = true
+cards-protocol.workspace = true 
+
+[features]
+default = ["std"]
+std = ["ark-ec/std", "ark-ff/std", "cards-deck/std"]
+# cards = ["deck/cards-proofs"]
+# "ark-std/std",  "ark-serialize/std",
+

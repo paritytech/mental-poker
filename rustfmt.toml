@@ -1,0 +1,42 @@
+# Basic
+style_edition = "2021"
+max_width = 100
+use_small_heuristics = "Max"
+
+# Imports
+imports_granularity = "Preserve" # "Crate"
+reorder_imports = false
+reorder_modules = false
+# group_imports = 
+# imports_granularity = 
+format_generated_files = false
+
+# Consistency
+newline_style = "Unix"
+where_single_line = true
+
+
+# Misc
+chain_width = 80
+spaces_around_ranges = false
+binop_separator = "Back"
+reorder_impl_items = false
+match_arm_leading_pipes = "Preserve"
+match_arm_blocks = false
+match_block_trailing_comma = true
+trailing_comma = "Vertical"
+trailing_semicolon = false
+use_field_init_shorthand = true
+
+format_macro_bodies = false
+# skip_macro_invocations = ["*"]
+
+# Format comments
+comment_width = 100
+wrap_comments = true
+# format_code_in_doc_comments = false
+
+fn_single_line = true
+fn_params_layout = "Compressed"
+
+ignore = [ "proofs", "protocol", "ez", "deck", "deck-secp256k1", "deck-bls12-377", "deck-bls12-381", "table", "play" ]

@@ -1,0 +1,16 @@
+[package]
+name = "ez-serialize"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+readme = "README.md"
+license = "MIT OR Apache-2.0"
+
+
+[dependencies]
+
+ark-std.workspace = true
+ark-serialize.workspace = true
+
