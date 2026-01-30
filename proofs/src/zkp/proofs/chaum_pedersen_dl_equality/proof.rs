@@ -11,8 +11,8 @@ pub struct Proof<C>
 where
     C: CurveGroup,
 {
-    pub(crate) a: C,
-    pub(crate) b: C,
+    pub(crate) a: C::Affine,
+    pub(crate) b: C::Affine,
     pub(crate) r: C::ScalarField,
 }
 

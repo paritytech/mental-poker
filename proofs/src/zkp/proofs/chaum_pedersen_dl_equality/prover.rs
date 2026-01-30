@@ -33,8 +33,8 @@ impl<C: CurveGroup> Prover<C> {
         t.append(statement.1);
 
         let omega: C::ScalarField = t.fork(b"rng").witness(system_rng).read_reduce();
-        let a = parameters.g.mul(omega);
-        let b = parameters.h.mul(omega);
+        let a = parameters.g.mul(omega).into_affine();
+        let b = parameters.h.mul(omega).into_affine();
 
         t.append(&a);
         t.append(&b);
