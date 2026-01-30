@@ -4,7 +4,7 @@ A mental poker protocol based upon Bayer-Groth shuffles of ElGamal ciphertexts o
 
 ## Background
 
-We fork and build upon the [https://hackmd.io/@nmohnblatt/SJKJfVqzq](mental poker library) by Kobi Gurkan and Nicolas Mohnblatt, which still provides the shuffles code used here.
+We fork and build upon the [mental poker library](https://hackmd.io/@nmohnblatt/SJKJfVqzq) by Kobi Gurkan and Nicolas Mohnblatt, which still provides the shuffles code used here.
 
 ["Mental Poker"](https://en.wikipedia.org/wiki/Mental_poker) was first formulated by [A. Shamir, R. Rivest, and L. Adleman in 1979](https://apps.dtic.mil/dtic/tr/fulltext/u2/a066331.pdf), and dramatically improved by [A. Barnett and N. Smart in 2003](https://www.semanticscholar.org/paper/Mental-Poker-Revisited-Barnett-Smart/8aaa1245c5876c78564c3f2df36ca615686d1402). 
 
