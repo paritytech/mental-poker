@@ -113,12 +113,12 @@ impl<C: CurveGroup> crate::Parameters<C> {
 
         // Map to Chaum-Pedersen parameters
         let cp_parameters = chaum_pedersen_dl_equality::Parameters::new(
-            &masked_card.0,
             &self.enc_parameters.generator,
+            &masked_card.0,
         );
 
         // Map to Chaum-Pedersen parameters
-        let cp_statement = chaum_pedersen_dl_equality::Statement::new(&token.0, &key.pk);
+        let cp_statement = chaum_pedersen_dl_equality::Statement::new(&key.pk, &token.0);
 
         let proof = chaum_pedersen_dl_equality::DLEquality::prove(
             rng,
@@ -139,12 +139,12 @@ impl<C: CurveGroup> crate::Parameters<C> {
     ) -> Result<&'a RevealToken<C>, CryptoError> {
         // Map to Chaum-Pedersen parameters
         let cp_parameters = chaum_pedersen_dl_equality::Parameters::new(
-            &masked_card.0,
             &self.enc_parameters.generator,
+            &masked_card.0,
         );
 
         // Map to Chaum-Pedersen parameters
-        let cp_statement = chaum_pedersen_dl_equality::Statement::new(&reveal.token.0, pk);
+        let cp_statement = chaum_pedersen_dl_equality::Statement::new(pk, &reveal.token.0);
 
         chaum_pedersen_dl_equality::DLEquality::verify(
             &cp_parameters,
