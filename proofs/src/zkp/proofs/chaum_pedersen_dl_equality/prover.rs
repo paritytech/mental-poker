@@ -1,9 +1,9 @@
-use crate::{IntoTranscript};
+use crate::{IntoTranscript, error::*};
 
-use super::{Parameters, Statement, Witness, proof::Proof, NAME};
+use super::{Parameters, Statement, Witness, proof::Proof};
 
 
-use ark_ec::{CurveGroup};
+use ark_ec::{CurveGroup, VariableBaseMSM}; // ark_ec::scalar_mul::variable_base
 use ark_std::{borrow::BorrowMut, rand::{Rng, CryptoRng}};
 
 
@@ -20,21 +20,23 @@ impl<C: CurveGroup> Prover<C> {
         statement: &Statement<C>,
         witness: &Witness<C>,
         t: impl IntoTranscript,
-    ) -> Proof<C> {
+    ) -> CryptoResult<Proof<C>> {
         use ark_std::ops::Mul;
 
         let mut t = t.into_transcript();
         let t = t.borrow_mut();
 
-        t.label(NAME);
-        t.append(parameters.g);
-        t.append(parameters.h);
-        t.append(statement.0);
-        t.append(statement.1);
+        let mut alphas = super::append_n_merge(t,parameters,statement)?;
 
         let omega: C::ScalarField = t.fork(b"rng").witness(system_rng).read_reduce();
         let a = parameters.g.mul(omega).into_affine();
-        let b = parameters.h.mul(omega).into_affine();
+        let b = if alphas.len() == 0 {
+            // assert_eq!(omega, omega * )
+            parameters.h[0].mul(omega)
+        } else {
+            for alpha in alphas.iter_mut() { *alpha *= omega; }
+            <C as VariableBaseMSM>::msm(&parameters.h,&alphas).expect("already checked above")
+        }.into_affine();
 
         t.append(&a);
         t.append(&b);
@@ -43,7 +45,7 @@ impl<C: CurveGroup> Prover<C> {
 
         let r = omega + c * *witness;
 
-        Proof { a, b, r }
+        Ok(Proof { a, b, r })
     }
 }
 
