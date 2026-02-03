@@ -291,7 +291,13 @@ impl<'p,C: CurveGroup>  AccumulateReveals<'p,C> {
 #[derive(Clone,CanonicalSerialize,CanonicalDeserialize)]
 pub struct RevealBatch<C: CurveGroup> {
     pub pk: PlayerPublicKey<C>,
-    pub set: Vec<RevealTnP<C>>,
+    // pub set: Vec<RevealTnP<C>>,
+    pub tokens: Vec<RevealToken<C>>,
+    pub proof: ZKProofReveal<C>,
+}
+
+fn affines_from_tokens<C: CurveGroup>(tokens: &[RevealToken<C>]) -> &[C::Affine] {
+    unsafe { core::mem::transmute(tokens) }
 }
 
 // TODO:  Use batch proving and verification, except that ETH would be
@@ -304,22 +310,59 @@ impl<C: CurveGroup> crate::Parameters<C> {
         key: &PlayerKeypair<C>,
         masked_cards: impl IntoIterator<Item=&'a MaskedCard<C>>,
     ) -> RevealBatch<C> {
-        let set = masked_cards.into_iter()
-        .map(|mc| self.prove_reveal(rng,key,mc)).collect();
-        RevealBatch { pk: key.pk.clone(), set }
+        // let set = masked_cards.into_iter()
+        // .map(|mc| self.prove_reveal(rng,key,mc)).collect();
+        // RevealBatch { pk: key.pk.clone(), set }
+
+        let (h,tokens): (Vec<_>,Vec<_>) = masked_cards.into_iter().map(|masked_card| {
+            let token: RevealToken<C> = key.compute_reveal_token(masked_card);
+            (masked_card.0, token)
+        }).unzip();
+
+        let cp_parameters = chaum_pedersen_dl_equality::Parameters {
+            g: &self.enc_parameters.generator, h: h.as_slice()
+        };
+
+        let cp_statement = chaum_pedersen_dl_equality::Statement(&key.pk, affines_from_tokens(tokens.as_slice()));
+
+        let proof = chaum_pedersen_dl_equality::DLEquality::prove(
+            rng,
+            &cp_parameters,
+            &cp_statement,
+            &key.sk,
+            REVEAL_RNG_SEED,
+        ).expect("Infallible prover");
+
+        RevealBatch { pk: key.pk.clone(), tokens, proof, }
     }
 
     /// Create a player's reveal proof a batch of masked cards
-    pub fn verify_reveals_batch<'a>(
+    pub fn verify_reveals_batch<'a,'b>(
         &self,
         reveals: &'a RevealBatch<C>,
-        masked_cards: impl IntoIterator<Item=&'a MaskedCard<C>>,
-    ) -> Result<(), CryptoError> {
-        let RevealBatch { pk, set } = reveals;
-        for (tp,mc) in set.iter().zip(masked_cards) {
-            self.verify_reveal(pk,tp,mc)?;
-        }
-        Ok(())
+        masked_cards: impl IntoIterator<Item=&'b MaskedCard<C>>,
+    ) -> Result<&'a [RevealToken<C>], CryptoError> {
+        // let RevealBatch { pk, set } = reveals;
+        // for (tp,mc) in set.iter().zip(masked_cards) {
+        //     self.verify_reveal(pk,tp,mc)?;
+        // }
+        // Ok(())
+
+        let h: Vec<_> = masked_cards.into_iter().map(|masked_card| masked_card.0).collect();
+        let cp_parameters = chaum_pedersen_dl_equality::Parameters {
+            g: &self.enc_parameters.generator, h: h.as_slice()
+        };
+
+        let cp_statement = chaum_pedersen_dl_equality::Statement(&reveals.pk, affines_from_tokens(reveals.tokens.as_slice()));
+
+        chaum_pedersen_dl_equality::DLEquality::verify(
+            &cp_parameters,
+            &cp_statement,
+            &reveals.proof,
+            REVEAL_RNG_SEED,
+        )?;
+
+        Ok(&reveals.tokens)
     }
 
     pub fn verify_batch_n_partial_unmasks<'a>(
@@ -327,9 +370,9 @@ impl<C: CurveGroup> crate::Parameters<C> {
         reveals: &'a RevealBatch<C>,
         masked_cards: &'a mut [MaskedCard<C>],
     ) -> Result<(), CryptoError> {
-        self.verify_reveals_batch(reveals,&*masked_cards)?;
-        for (tp,mc) in reveals.set.iter().zip(masked_cards) {
-            update_masked_card(mc,&tp.token);
+        let tokens = self.verify_reveals_batch(reveals,&*masked_cards)?;
+        for (token,mc) in tokens.iter().zip(masked_cards) {
+            update_masked_card(mc,&token);
         }
         Ok(())
     }
