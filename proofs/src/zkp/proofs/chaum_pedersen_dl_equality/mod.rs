@@ -58,7 +58,7 @@ pub(crate) fn append_n_merge<'a,C: CurveGroup>(
     t.append(statement.0);
     t.append(statement.1);
     Ok(if l == 1 { Vec::new() } else {
-        let mut alphas = t.challenge(b"batch");
+        let mut alphas = t.challenge(b"merge");
         // 128 bit scalers appears secure here since we're scaling all of them,
         // except the public key base point. 
         (0..l).map(|_| alphas.read_128bit_scalar::<C::ScalarField>()).collect()

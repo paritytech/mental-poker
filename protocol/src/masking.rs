@@ -96,14 +96,6 @@ impl<C: CurveGroup> crate::Parameters<C> {
     }
 
     /// Create a `MaskedCard` from an explicitly specified `UnmaskedCard`.
-    ///
-    /// It's unclear if the following is correct right now, maybe the
-    /// shuffle even depends upon not knowing the mask, shich would
-    /// create a mess in eviction.
-    ///
-    /// It's unclear how this would ever be usedful when representing some
-    /// conventional physical card game, but it maybe becomes useful for
-    /// cryptographic card games not representable by physical cards.
     pub fn prove_mask<R: Rng+CryptoRng>(
         &self,
         rng: &mut R,
@@ -174,6 +166,8 @@ impl<C: CurveGroup> crate::Parameters<C> {
     }
 }
 
+// TODO: Use the merged proof here.  We never use masking though now
+// since the shuffle should be secure without masking.
 #[derive(Clone,CanonicalSerialize,CanonicalDeserialize)] // Debug
 pub struct MaskingBatch<C: CurveGroup> {
     pub masked_cards: Vec<MaskedCard<C>>,
