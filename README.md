@@ -23,11 +23,11 @@ cargo run --example round
 &copy; 2025 [Jeffrey Burdges](https://github.com/burdges/).
 &copy; 2022 [Geometry](https://geometryresearch.xyz).
 
+Through 2025, this crate is licensed under either of
 
-Since 2025, this project is licensed under the [GNU Affero General Public License version 3](https://www.gnu.org/licenses/agpl.html) ([`LICENSE-AGPL-v3.0.txt`](LICENSE-AGPL-v3.0)) as published by the Free Software Foundation.
+- [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0) ([`LICENSE-APACHE`](LICENSE-APACHE))
+- [MIT license](https://opensource.org/licenses/MIT) ([`LICENSE-MIT`](LICENSE-MIT))
 
-Ergo, the [SPDX](https://spdx.dev) license identifier for this project is `AGPL-3.0-or-later`.
+at your option.
 
-All commits from 2024 or earlier are &copy; 2022 [Geometry](https://geometryresearch.xyz), who licenses them under either of the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0) ([`LICENSE-APACHE`](proofs/LICENSE-APACHE)), or the [MIT license](https://opensource.org/licenses/MIT) ([`LICENSE-MIT`](proofs/LICENSE-MIT)), at your option.  We strongly suggest you clone from [github.com/geometryxyz/mental-poker](https://github.com/geometryxyz/mental-poker/) if you want their original `MIT OR Apache-2.0` licensed version.
-
-<!-- A series of posts explaining the protocol and our approach to implementing it are available in the [Geometry Notebook](https://geometryresearch.xyz/notebook). [Part 1](https://geometryresearch.xyz/notebook/mental-poker-in-the-age-of-snarks-part-1) covers the protocol and primitives from a high level, [Part 2](https://geometryresearch.xyz/notebook/mental-poker-in-the-age-of-snarks-part-2) goes into some of the math. -->
+The [SPDX](https://spdx.dev) license identifier for this crate is `MIT OR Apache-2.0`.
