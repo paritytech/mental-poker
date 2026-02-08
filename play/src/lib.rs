@@ -39,7 +39,7 @@ pub type AggregatedPublicKeys = cards_protocol::keys::AggregatedPublicKeys<'stat
 // cards_protocol::reveal
 
 pub type RevealMessage = cards_protocol::reveal::RevealMessage<Curve>;
-pub type RevealBatch = cards_protocol::reveal::RevealBatch<Curve>;
+pub type RevealsMerged = cards_protocol::reveal::RevealsMerged<Curve>;
 pub type AccumulateReveals = cards_protocol::reveal::AccumulateReveals<'static, Curve>;
 
 // cards_protocol::shuffle

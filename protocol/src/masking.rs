@@ -169,7 +169,7 @@ impl<C: CurveGroup> crate::Parameters<C> {
 // TODO: Use the merged proof here.  We never use masking though now
 // since the shuffle should be secure without masking.
 #[derive(Clone,CanonicalSerialize,CanonicalDeserialize)] // Debug
-pub struct MaskingBatch<C: CurveGroup> {
+pub struct MaskingsMerged<C: CurveGroup> {
     pub masked_cards: Vec<MaskedCard<C>>,
     pub masking_proofs: Vec<ZKProofMasking<C>>,
 }
@@ -180,19 +180,19 @@ impl<'p,C: CurveGroup> crate::keys::AggregatedPublicKeys<'p,C> {
         rng: &mut R,
         cards: impl IntoIterator<Item=UnmaskedCard<C>>,
         rs: impl IntoIterator<Item=&'a Scalar<C>>, //Option<_> ??
-    ) -> MaskingBatch<C> {
+    ) -> MaskingsMerged<C> {
         let (masked_cards, masking_proofs) = cards.into_iter().zip(rs)
         .map(|(oc,r)| self.parameters().prove_mask(rng, self.aggregate_key(), &oc, r))
         .unzip();
-        MaskingBatch { masked_cards, masking_proofs, }
+        MaskingsMerged { masked_cards, masking_proofs, }
     }
 
     pub fn verify_masks<'a>(
         &self,
         cards: impl IntoIterator<Item=UnmaskedCard<C>>,
-        masked: &MaskingBatch<C>,
+        masked: &MaskingsMerged<C>,
     ) -> Result<(), CryptoError> {
-        let MaskingBatch { masked_cards, masking_proofs } = masked;
+        let MaskingsMerged { masked_cards, masking_proofs } = masked;
         for (i,oc) in cards.into_iter().enumerate() {
             self.parameters().verify_mask(
                 self.aggregate_key(), &oc, &masked_cards[i], &masking_proofs[i]

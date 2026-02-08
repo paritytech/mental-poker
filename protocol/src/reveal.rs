@@ -286,10 +286,10 @@ impl<'p,C: CurveGroup>  AccumulateReveals<'p,C> {
 /// Reveals and proves the signer's `RevealToken`s for a batch of masked card.
 /// Accumulate these from all signers to provably reveal the card.
 /// 
-/// `RevealBatch`s contain their own self signature.
+/// `RevealsMerged`s contain their own self signature.
 /// TODO:  Use batch proving or verification.
 #[derive(Clone,CanonicalSerialize,CanonicalDeserialize)]
-pub struct RevealBatch<C: CurveGroup> {
+pub struct RevealsMerged<C: CurveGroup> {
     pub pk: PlayerPublicKey<C>,
     // pub set: Vec<RevealTnP<C>>,
     pub tokens: Vec<RevealToken<C>>,
@@ -309,10 +309,10 @@ impl<C: CurveGroup> crate::Parameters<C> {
         rng: &mut R,
         key: &PlayerKeypair<C>,
         masked_cards: impl IntoIterator<Item=&'a MaskedCard<C>>,
-    ) -> RevealBatch<C> {
+    ) -> RevealsMerged<C> {
         // let set = masked_cards.into_iter()
         // .map(|mc| self.prove_reveal(rng,key,mc)).collect();
-        // RevealBatch { pk: key.pk.clone(), set }
+        // RevealsMerged { pk: key.pk.clone(), set }
 
         let (h,tokens): (Vec<_>,Vec<_>) = masked_cards.into_iter().map(|masked_card| {
             let token: RevealToken<C> = key.compute_reveal_token(masked_card);
@@ -333,16 +333,16 @@ impl<C: CurveGroup> crate::Parameters<C> {
             REVEAL_RNG_SEED,
         ).expect("Infallible prover");
 
-        RevealBatch { pk: key.pk.clone(), tokens, proof, }
+        RevealsMerged { pk: key.pk.clone(), tokens, proof, }
     }
 
     /// Create a player's reveal proof a batch of masked cards
     pub fn verify_reveals_batch<'a,'b>(
         &self,
-        reveals: &'a RevealBatch<C>,
+        reveals: &'a RevealsMerged<C>,
         masked_cards: impl IntoIterator<Item=&'b MaskedCard<C>>,
     ) -> Result<&'a [RevealToken<C>], CryptoError> {
-        // let RevealBatch { pk, set } = reveals;
+        // let RevealsMerged { pk, set } = reveals;
         // for (tp,mc) in set.iter().zip(masked_cards) {
         //     self.verify_reveal(pk,tp,mc)?;
         // }
@@ -367,7 +367,7 @@ impl<C: CurveGroup> crate::Parameters<C> {
 
     pub fn verify_batch_n_partial_unmasks<'a>(
         &self,
-        reveals: &'a RevealBatch<C>,
+        reveals: &'a RevealsMerged<C>,
         masked_cards: &'a mut [MaskedCard<C>],
     ) -> Result<(), CryptoError> {
         let tokens = self.verify_reveals_batch(reveals,&*masked_cards)?;
