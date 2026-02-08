@@ -1,5 +1,7 @@
 // use wasm_bindgen::prelude::*;
 
+use getrandom_or_panic::getrandom_or_panic;
+
 pub mod serialize;
 pub use serialize::{MyDeserialize, MySerialize};
 
@@ -38,6 +40,7 @@ pub type AggregatedPublicKeys = cards_protocol::keys::AggregatedPublicKeys<'stat
 
 // cards_protocol::reveal
 
+pub type RevealToken = cards_protocol::reveal::RevealToken<Curve>;
 pub type RevealMessage = cards_protocol::reveal::RevealMessage<Curve>;
 pub type RevealsMerged = cards_protocol::reveal::RevealsMerged<Curve>;
 pub type AccumulateReveals = cards_protocol::reveal::AccumulateReveals<'static, Curve>;
