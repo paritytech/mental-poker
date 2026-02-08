@@ -287,7 +287,6 @@ impl<'p,C: CurveGroup>  AccumulateReveals<'p,C> {
 /// Accumulate these from all signers to provably reveal the card.
 /// 
 /// `RevealsMerged`s contain their own self signature.
-/// TODO:  Use batch proving or verification.
 #[derive(Clone,CanonicalSerialize,CanonicalDeserialize)]
 pub struct RevealsMerged<C: CurveGroup> {
     pub pk: PlayerPublicKey<C>,
@@ -300,11 +299,9 @@ fn affines_from_tokens<C: CurveGroup>(tokens: &[RevealToken<C>]) -> &[C::Affine]
     unsafe { core::mem::transmute(tokens) }
 }
 
-// TODO:  Use batch proving and verification, except that ETH would be
-// simpler not using batch verification.
 impl<C: CurveGroup> crate::Parameters<C> {
     /// Create the player's reveal proof a batch of masked cards
-    pub fn prove_reveals_batch<'a,R: Rng+CryptoRng>(
+    pub fn prove_merged_reveals<'a,R: Rng+CryptoRng>(
         &self,
         rng: &mut R,
         key: &PlayerKeypair<C>,
@@ -337,7 +334,7 @@ impl<C: CurveGroup> crate::Parameters<C> {
     }
 
     /// Create a player's reveal proof a batch of masked cards
-    pub fn verify_reveals_batch<'a,'b>(
+    pub fn verify_merged_reveals<'a,'b>(
         &self,
         reveals: &'a RevealsMerged<C>,
         masked_cards: impl IntoIterator<Item=&'b MaskedCard<C>>,
@@ -365,12 +362,12 @@ impl<C: CurveGroup> crate::Parameters<C> {
         Ok(&reveals.tokens)
     }
 
-    pub fn verify_batch_n_partial_unmasks<'a>(
+    pub fn verify_merged_n_partial_unmasks<'a>(
         &self,
         reveals: &'a RevealsMerged<C>,
         masked_cards: &'a mut [MaskedCard<C>],
     ) -> Result<(), CryptoError> {
-        let tokens = self.verify_reveals_batch(reveals,&*masked_cards)?;
+        let tokens = self.verify_merged_reveals(reveals,&*masked_cards)?;
         for (token,mc) in tokens.iter().zip(masked_cards) {
             update_masked_card(mc,&token);
         }

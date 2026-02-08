@@ -66,5 +66,5 @@ fn test_unmask() {
     )
 }
 
-// prove_reveals_batch
-// verify_reveals_batch
+// prove_merged_reveals
+// verify_merged_reveals
