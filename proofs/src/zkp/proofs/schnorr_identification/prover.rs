@@ -4,7 +4,7 @@ use super::{Parameters, Statement, Witness, proof::Proof, NAME};
 use ark_ec::{CurveGroup};
 use ark_std::{borrow::BorrowMut, rand::{Rng, CryptoRng}};
 
-use std::marker::PhantomData;
+use core::marker::PhantomData;
 
 pub struct Prover<C: CurveGroup> {
     phantom: PhantomData<C>,

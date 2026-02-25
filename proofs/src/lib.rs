@@ -4,6 +4,9 @@
 #[macro_use]
 extern crate std;
 
+#[macro_use]
+extern crate alloc;
+
 pub mod error;
 pub mod homomorphic_encryption;
 pub mod utils;

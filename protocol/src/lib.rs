@@ -4,6 +4,7 @@
 #[macro_use]
 extern crate std;
 
+extern crate alloc;
 
 pub use ark_ec::{AffineRepr, CurveGroup, PrimeGroup};
 pub use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, SerializationError};

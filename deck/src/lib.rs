@@ -56,10 +56,13 @@ pub struct SortedDeck<A: AffineRepr>(pub [A]);
 // fn xy_key<A: AffineRepr>(p: &A) -> Option<(A::BaseField, A::BaseField)> { p.xy() }
 
 fn serialize_key<A: AffineRepr>(p: &A) -> [u8; 100] {
-    let mut v = ark_std::io::Cursor::new([0u8; 100]);
-    p.serialize_compressed(&mut v)
-        .expect("At present nobody uses elliptic curves bigger than 100 bytes.");
-    v.into_inner()
+    let mut buf = [0u8; 100];
+    {
+        let mut cursor = ark_std::io::Cursor::new(&mut buf[..]);
+        p.serialize_compressed(&mut cursor)
+            .expect("At present nobody uses elliptic curves bigger than 100 bytes.");
+    }
+    buf
 }
 
 impl<A: AffineRepr> SortedDeck<A> {

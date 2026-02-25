@@ -10,7 +10,7 @@ impl<C: CurveGroup> Mul<C::ScalarField> for Plaintext<C> {
     }
 }
 
-impl<C: CurveGroup> std::ops::Add<Plaintext<C>> for Plaintext<C> {
+impl<C: CurveGroup> core::ops::Add<Plaintext<C>> for Plaintext<C> {
     type Output = Self;
 
     fn add(self, _rhs: Self) -> Self {

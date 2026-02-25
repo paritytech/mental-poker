@@ -10,7 +10,7 @@ impl<C: CurveGroup> Mul<C::ScalarField> for Commitment<C> {
     }
 }
 
-impl<C: CurveGroup> std::ops::Add for Commitment<C> {
+impl<C: CurveGroup> core::ops::Add for Commitment<C> {
     type Output = Self;
 
     fn add(self, _rhs: Self) -> Self {
@@ -18,7 +18,7 @@ impl<C: CurveGroup> std::ops::Add for Commitment<C> {
     }
 }
 
-impl<C: CurveGroup> std::iter::Sum for Commitment<C> {
+impl<C: CurveGroup> core::iter::Sum for Commitment<C> {
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
         iter.fold(Self::zero(), |a, b| a + b)
     }
