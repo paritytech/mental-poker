@@ -1,7 +1,7 @@
 use super::super::Plaintext;
 
 use ark_ec::{AffineRepr, CurveGroup};
-use ark_std::{UniformRand, ops::Mul, Zero, rand::Rng};
+use ark_std::{UniformRand, ops::{Add,Mul}, Zero, rand::Rng};
 
 impl<C: CurveGroup> Mul<C::ScalarField> for Plaintext<C> {
     type Output = Self;
@@ -10,7 +10,7 @@ impl<C: CurveGroup> Mul<C::ScalarField> for Plaintext<C> {
     }
 }
 
-impl<C: CurveGroup> core::ops::Add<Plaintext<C>> for Plaintext<C> {
+impl<C: CurveGroup> Add<Plaintext<C>> for Plaintext<C> {
     type Output = Self;
 
     fn add(self, _rhs: Self) -> Self {

@@ -20,4 +20,4 @@ cards-proofs = { workspace = true, optional = true }
 
 [features]
 default = ["std", "cards-proofs"]
-std = ["ark-std/std", "ark-ec/std", "ark-ff/std", "ark-serialize/std", "cards-proofs?/std"]
+std = ["ark-ec/std", "ark-ff/std", "ark-serialize/std"] # "cards-proofs?/std"]

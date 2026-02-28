@@ -19,8 +19,10 @@ ark-transcript.workspace = true
 
 thiserror.workspace = true
 
-[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]
-getrandom = { version = "0.2", features = ["js"] }
+# TODO:  Where should this go?
+# [target.'cfg(target_arch = "wasm32")'.dependencies]
+# [target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]
+# getrandom = { version = "0.2", features = ["js"] }
 
 [dev-dependencies]
 rand.workspace = true

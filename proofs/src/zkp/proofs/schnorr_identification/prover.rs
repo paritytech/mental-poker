@@ -2,9 +2,8 @@ use crate::{IntoTranscript};
 use super::{Parameters, Statement, Witness, proof::Proof, NAME};
 
 use ark_ec::{CurveGroup};
-use ark_std::{borrow::BorrowMut, rand::{Rng, CryptoRng}};
+use ark_std::{borrow::BorrowMut, marker::PhantomData, rand::{Rng, CryptoRng}};
 
-use core::marker::PhantomData;
 
 pub struct Prover<C: CurveGroup> {
     phantom: PhantomData<C>,
