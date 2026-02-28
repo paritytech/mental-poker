@@ -1,5 +1,6 @@
 [workspace.package]
 authors = ["Jeffrey Burdges <jeff@web3.foundation>", "Geometry Research (https://geometryresearch.xyz)"]
+license = "MIT OR Apache-2.0"
 version = "0.1.0"
 edition = "2024"
 homepage = "https://github.com/w3f/mental-poker"
@@ -48,4 +49,7 @@ getrandom_or_panic = { version = "0.0.3", default-features = false }
 
 thiserror = { version = "1.0.30", default-features = false }
 
+serde = { version = "1", default-features = false, features = ["derive"] }
+ark-serde-compat = { version = "0.1", default-features = false }
+wasm-bindgen = { version = "0.2.100", default-features = false }
 

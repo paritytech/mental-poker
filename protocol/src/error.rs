@@ -18,7 +18,7 @@ pub enum CardProtocolError {
     // Internal error type, aka developer miss-use.
     #[error("Wrong card!")]
     WrongCard,
-    // reveal.rs, table/{mod.rs,draws.rs}
+    // reveal.rs
 
     /// Returnned by `reveal::{card_position,reveal_position}`.
     ///
@@ -69,7 +69,6 @@ pub enum CardProtocolError {
     /// ...
     #[error("{0}")]
     InvalidProof(&'static str),
-    // table/draws.rs, eviction.rs
 
     #[error("{0}")] // Previously the simplifying "Failed to verify proof", but why?   See https://docs.rs/thiserror/latest/thiserror/
     ProofError(#[from] CryptoError),

@@ -2,6 +2,8 @@ use cards_protocol::IntoTranscript;
 
 use crate::*;
 
+use ark_serialize::{CanonicalSerialize,CanonicalDeserialize,SerializationError,Compress,Validate,Valid};
+
 pub fn generate_player(
     player_public_info: impl IntoTranscript,
 ) -> (PlayerHello, PlayerKeypair) {
@@ -15,38 +17,63 @@ pub fn verify_player(
     Ok(PARAMS.verify_player(pk,player_public_info)?)
 }
 
-pub trait AggregatedPublicKeysExt {
+type ApkInner = cards_protocol::keys::AggregatedPublicKeys<'static, Curve>;
+
+#[derive(Clone,CanonicalSerialize,Debug)]
+#[cfg_attr(feature="serde", derive(Serialize, Deserialize))]
+#[repr(transparent)]
+pub struct AggregatedPublicKeys(
+    #[cfg_attr(feature="serde", serde(with = "ark_serde_compat"))]
+    pub ApkInner
+);
+
+impl core::ops::Deref for AggregatedPublicKeys {
+    type Target = ApkInner;
+    fn deref(&self) -> &Self::Target { &self.0}
+}
+
+impl CanonicalDeserialize for AggregatedPublicKeys {
+    fn deserialize_with_mode<R: ark_std::io::Read>(
+        reader: R,
+        compress: Compress,
+        validate: Validate,
+    ) -> Result<Self, SerializationError> {
+        Ok(AggregatedPublicKeys(ApkInner::deserialize_with_mode(reader,compress,validate,PARAMS) ?))
+    }
+}
+impl Valid for AggregatedPublicKeys {
+    fn check(&self) -> Result<(), SerializationError> {
+        self.0.check()
+    }
+}
+
+// fn verify_n_add
+// fn verify_shuffle
+// fn prove_merged_reveals
+
+impl AggregatedPublicKeys {
     /// Shuffle cards and produce proof using system randomness
     ///
     /// Verified using `verify_shuffle`
-    fn shuffle_and_remask_(&self, deck: &[MaskedCard])
-        -> Result<ShuffleMessage, CardProtocolError>;
-    
-    /// verify_merged_reveals
-    fn verify_quit<'a,'b>(
-        &mut self,
-        reveals: &'a RevealsMerged,
-        masked_cards: impl IntoIterator<Item=&'b MaskedCard>,
-    ) -> Result<&'a [RevealToken], CardProtocolError>;  // Not CryptoError?
-}
-
-impl AggregatedPublicKeysExt for AggregatedPublicKeys {
-    fn shuffle_and_remask_(
-        &self,deck: &[MaskedCard],
+    pub fn shuffle_and_remask_(
+        &self, deck: &[MaskedCard],
     ) -> Result<ShuffleMessage, CardProtocolError> {
         self.shuffle_and_remask(&mut getrandom_or_panic(), deck)
     }
-
-    fn verify_quit<'a,'b>(
+    
+    pub fn verify_quit<'a,'b>(
         &mut self,
         reveals: &'a RevealsMerged,
         masked_cards: impl IntoIterator<Item=&'b MaskedCard>,
     ) -> Result<&'a [RevealToken], CardProtocolError> {  // Not CryptoError?
-        let idx = self.player_index(&reveals.pk)?;
+        let idx = self.0.player_index(&reveals.pk)?;
         verify_merged_reveals(reveals,masked_cards)
-        .map(|r| { let _ = self.remove(idx); r })
+        .map(|r| { let _ = self.0.remove(idx); r })
     }
 }
+
+// Afaik prove_merged_reveals and verify_merged_reveals should
+// opnly be called by Table, not directly.
 
 pub fn prove_merged_reveals<'a>(
     key: &PlayerKeypair,
@@ -63,19 +90,17 @@ pub fn verify_merged_reveals<'a,'b>(
 }
 
 
-// wasm bidgen TODO:
-//
-// generate_player
-// verify_player
-// prove_merged_reveals
-// verify_merged_reveals
 //
 // On AggregatedPublicKeys::
-// verify_n_add
-// shuffle_and_remask_
-// verify_shuffle
-// prove_merged_reveals
-// verify_quit
 //
-//
-//
+
+/*
+#[cfg(feature = "bytes")]
+pub mod bytes {
+    pub fn generate_player(
+        player_public_info: impl IntoTranscript,
+    ) -> (PlayerHello, PlayerKeypair) {
+        super::generate_player
+    }
+}
+*/

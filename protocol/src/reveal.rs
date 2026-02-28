@@ -1,13 +1,17 @@
 
 use crate::{
+    Parameters, error::CardProtocolError,
     CanonicalSerialize,CanonicalDeserialize,SerializationError,
     UnmaskedCard, MaskedCard,
-    keys::*,
-    error::CardProtocolError
+    keys::*,    
 };
 
 use ark_ec::{AffineRepr,CurveGroup};
-use ark_std::{vec::Vec, rand::{Rng,CryptoRng}, Zero}; // io::{self,Write}
+use ark_std::{io::{Read,Write}, vec::Vec, rand::{Rng,CryptoRng}, Zero}; // io::{self,Write}
+use ark_serialize::{Compress,Validate,Valid};
+
+#[cfg(feature="serde")]
+use serde::{Serialize, Deserialize};
 
 use cards_proofs::{
     error::CryptoError,
@@ -78,9 +82,13 @@ pub struct RevealTnP<C: CurveGroup> {
 /// 
 /// `RevealMessage`s contain their own self signature.
 #[derive(Clone,CanonicalSerialize,CanonicalDeserialize,Debug)]
+#[cfg_attr(feature="serde", derive(Serialize, Deserialize))]
 pub struct RevealMessage<C: CurveGroup> {
+    #[cfg_attr(feature="serde", serde(with = "ark_serde_compat"))]
     pub pk: PlayerPublicKey<C>,
+    #[cfg_attr(feature="serde", serde(with = "ark_serde_compat"))]
     pub masked_card: MaskedCard<C>,
+    #[cfg_attr(feature="serde", serde(with = "ark_serde_compat"))]
     pub tp: RevealTnP<C>,
 }
 
@@ -257,29 +265,53 @@ impl<'p,C: CurveGroup>  AccumulateReveals<'p,C> {
         Some(status.1)
     }
 
-    /// If `c = C::compressed_size()`, often 32 bytes, then
-    /// `AccumulateReveals` serializes in `4 c` bytes.
-    pub fn serialized_size(&self) -> usize {
-        self.remaining_key.compressed_size()
-        + self.masked_card.compressed_size()
-        + self.token.compressed_size()
-    }
-
-    pub fn serialize<W: ark_std::io::Write>(&self, mut w: W) -> Result<(), SerializationError> {
-        self.remaining_key.serialize_compressed(&mut w)?;
-        self.masked_card.serialize_compressed(&mut w)?;
-        self.token.serialize_compressed(&mut w)
-    }
-
     /// Deserialize `AggregatedPublicKeys` from a serialized `Vec<PlayerPublicKey<C>>`,
     /// without checking anything.
-    pub fn deserialize<R: ark_std::io::Read>(mut r: R, parameters: &'p crate::Parameters<C>) -> Result<AccumulateReveals<'p,C>,SerializationError> {
+    pub fn deserialize_with_mode<R: Read>(
+        mut reader: R,
+        compress: Compress,
+        validate: Validate,
+        parameters: &'p Parameters<C>,
+    ) -> Result<AccumulateReveals<'p,C>,SerializationError> {
         Ok(AccumulateReveals {
             parameters,
-            remaining_key: CanonicalDeserialize::deserialize_compressed(&mut r)?,
-            masked_card: CanonicalDeserialize::deserialize_compressed(&mut r)?,
-            token: CanonicalDeserialize::deserialize_compressed(&mut r)?,
+            remaining_key: CanonicalDeserialize::deserialize_with_mode(&mut reader,compress,validate)?,
+            masked_card: CanonicalDeserialize::deserialize_with_mode(&mut reader,compress,validate)?,
+            token: CanonicalDeserialize::deserialize_with_mode(&mut reader,compress,validate)?,
         })
+    }
+
+    /// Deserialize `AggregatedPublicKeys` from a serialized `Vec<PlayerPublicKey<C>>`.   // without checking anything.
+    pub fn deserialize_compressed<R: Read>(r: R, parameters: &'p Parameters<C>) -> Result<AccumulateReveals<'p,C>,SerializationError> {
+        Self::deserialize_with_mode(r,Compress::Yes,Validate::Yes,parameters)
+    }
+}
+
+impl<'p, C: CurveGroup> CanonicalSerialize for AccumulateReveals<'p,C> {
+    /// One public key per player, plus 4 byte size.
+    fn serialize_with_mode<W: Write>(
+        &self,
+        mut writer: W,
+        compress: Compress,
+    ) -> Result<(), SerializationError> {
+        self.remaining_key.serialize_with_mode(&mut writer,compress)?;
+        self.masked_card.serialize_with_mode(&mut writer,compress)?;
+        self.token.serialize_with_mode(&mut writer,compress)
+    }
+
+    /// If `c = C::compressed_size()`, often 32 bytes, then
+    /// `AccumulateReveals` serializes in `4 c` bytes when compressed.
+    fn serialized_size(&self, compress: Compress) -> usize {
+        self.remaining_key.serialized_size(compress)
+        + self.masked_card.serialized_size(compress)
+        + self.token.serialized_size(compress)
+    }
+}
+impl<'p, C: CurveGroup> Valid for AccumulateReveals<'p,C> {
+    fn check(&self) -> Result<(), SerializationError> {
+        self.remaining_key.check()?;
+        self.masked_card.check()?;
+        self.token.check()
     }
 }
 
@@ -287,11 +319,16 @@ impl<'p,C: CurveGroup>  AccumulateReveals<'p,C> {
 /// Accumulate these from all signers to provably reveal the card.
 /// 
 /// `RevealsMerged`s contain their own self signature.
+/// TODO:  Use batch proving or verification.
 #[derive(Clone,CanonicalSerialize,CanonicalDeserialize)]
+#[cfg_attr(feature="serde", derive(Serialize, Deserialize))]
 pub struct RevealsMerged<C: CurveGroup> {
+    #[cfg_attr(feature="serde", serde(with = "ark_serde_compat"))]
     pub pk: PlayerPublicKey<C>,
     // pub set: Vec<RevealTnP<C>>,
+    #[cfg_attr(feature="serde", serde(with = "ark_serde_compat"))]
     pub tokens: Vec<RevealToken<C>>,
+    #[cfg_attr(feature="serde", serde(with = "ark_serde_compat"))]
     pub proof: ZKProofReveal<C>,
 }
 
@@ -333,7 +370,7 @@ impl<C: CurveGroup> crate::Parameters<C> {
         RevealsMerged { pk: key.pk.clone(), tokens, proof, }
     }
 
-    /// Create a player's reveal proof a batch of masked cards
+    /// Create a player's merged reveal proof of a batch of masked cards
     pub fn verify_merged_reveals<'a,'b>(
         &self,
         reveals: &'a RevealsMerged<C>,
