@@ -11,6 +11,9 @@ use ark_std::{io::{Read,Write}, vec::Vec, rand::{Rng,CryptoRng}, Zero}; // io::{
 use ark_serialize::{Compress,Validate,Valid};
 
 #[cfg(feature="serde")]
+use ark_serialize::{CompressedChecked};
+
+#[cfg(feature="serde")]
 use serde::{Serialize, Deserialize};
 
 use cards_proofs::{
@@ -83,12 +86,10 @@ pub struct RevealTnP<C: CurveGroup> {
 /// `RevealMessage`s contain their own self signature.
 #[derive(Clone,CanonicalSerialize,CanonicalDeserialize,Debug)]
 #[cfg_attr(feature="serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature="serde", serde(from = "CompressedChecked<Self>", into = "CompressedChecked<Self>"))]
 pub struct RevealMessage<C: CurveGroup> {
-    #[cfg_attr(feature="serde", serde(with = "ark_serde_compat"))]
     pub pk: PlayerPublicKey<C>,
-    #[cfg_attr(feature="serde", serde(with = "ark_serde_compat"))]
     pub masked_card: MaskedCard<C>,
-    #[cfg_attr(feature="serde", serde(with = "ark_serde_compat"))]
     pub tp: RevealTnP<C>,
 }
 
@@ -98,6 +99,11 @@ impl<C: CurveGroup> core::ops::Deref for RevealMessage<C> {
 }
 impl<C: CurveGroup> core::ops::DerefMut for RevealMessage<C> {
     fn deref_mut(&mut self) -> &mut RevealTnP<C> { &mut self.tp }
+}
+
+#[cfg(feature="serde")]
+impl<C: CurveGroup> From<CompressedChecked<RevealMessage<C>>> for RevealMessage<C> {
+    fn from(sig: CompressedChecked<RevealMessage<C>>) -> Self { sig.0 }
 }
 
 impl<C: CurveGroup> PlayerKeypair<C> {
@@ -322,14 +328,17 @@ impl<'p, C: CurveGroup> Valid for AccumulateReveals<'p,C> {
 /// TODO:  Use batch proving or verification.
 #[derive(Clone,CanonicalSerialize,CanonicalDeserialize)]
 #[cfg_attr(feature="serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature="serde", serde(from = "CompressedChecked<Self>", into = "CompressedChecked<Self>"))]
 pub struct RevealsMerged<C: CurveGroup> {
-    #[cfg_attr(feature="serde", serde(with = "ark_serde_compat"))]
     pub pk: PlayerPublicKey<C>,
     // pub set: Vec<RevealTnP<C>>,
-    #[cfg_attr(feature="serde", serde(with = "ark_serde_compat"))]
     pub tokens: Vec<RevealToken<C>>,
-    #[cfg_attr(feature="serde", serde(with = "ark_serde_compat"))]
     pub proof: ZKProofReveal<C>,
+}
+
+#[cfg(feature="serde")]
+impl<C: CurveGroup> From<CompressedChecked<RevealsMerged<C>>> for RevealsMerged<C> {
+    fn from(sig: CompressedChecked<RevealsMerged<C>>) -> Self { sig.0 }
 }
 
 fn affines_from_tokens<C: CurveGroup>(tokens: &[RevealToken<C>]) -> &[C::Affine] {

@@ -48,6 +48,9 @@ getrandom_or_panic = { version = "0.0.3", default-features = false }
 thiserror = { version = "2", default-features = false }
 
 serde = { version = "1", default-features = false, features = ["derive"] }
-ark-serde-compat = { version = "0.1", default-features = false }
+# ark-serde-compat = { version = "0.1", default-features = false }
 wasm-bindgen = { version = "0.2.100", default-features = false }
+
+[patch.crates-io]
+ark-serialize = { git = "https://github.com/arkworks-rs/algebra?rev=serde", rev = "bf1c9b2" }
 

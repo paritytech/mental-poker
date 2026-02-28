@@ -28,8 +28,7 @@ cards-protocol.workspace = true
 deck-secp256k1.workspace = true
 ez-serialize.workspace = true
 
-serde = { workspace = true, optional = true }
-ark-serde-compat = { workspace = true, optional = true }
+serde = { workspace = true, optional = true, features = ["derive"] }
 wasm-bindgen = { workspace = true, optional = true }
 
 [dev-dependencies]
@@ -44,7 +43,7 @@ crate-type = ["rlib", "cdylib"]
 default = ["std"]
 std = ["ark-std/std", "ark-serialize/std", "cards-deck/std", "wasm-bindgen?/std"]
 # "ark-ec/std", "ark-ff/std", 
-serde = ["dep:serde", "dep:ark-serde-compat"]
+serde = ["dep:serde", "ark-serialize/serde"]
 wasm-bindgen = ["serde", "dep:wasm-bindgen"]
 
 

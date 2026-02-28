@@ -1,8 +1,13 @@
 use cards_protocol::IntoTranscript;
-
 use crate::*;
 
-use ark_serialize::{CanonicalSerialize,CanonicalDeserialize,SerializationError,Compress,Validate,Valid};
+use ark_serialize::{CanonicalSerialize,CanonicalDeserialize,SerializationError,Compress,Validate,Valid,CompressedChecked};
+
+#[cfg(feature="serde")]
+use serde::{Serialize, Deserialize};
+
+#[cfg(feature="wasm-bindgen")]
+use wasm_bindgen::prelude::*;
 
 pub fn generate_player(
     player_public_info: impl IntoTranscript,
@@ -21,9 +26,9 @@ type ApkInner = cards_protocol::keys::AggregatedPublicKeys<'static, Curve>;
 
 #[derive(Clone,CanonicalSerialize,Debug)]
 #[cfg_attr(feature="serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature="serde", serde(from = "CompressedChecked<Self>", into = "CompressedChecked<Self>"))]
 #[repr(transparent)]
 pub struct AggregatedPublicKeys(
-    #[cfg_attr(feature="serde", serde(with = "ark_serde_compat"))]
     pub ApkInner
 );
 
@@ -32,6 +37,9 @@ impl core::ops::Deref for AggregatedPublicKeys {
     fn deref(&self) -> &Self::Target { &self.0}
 }
 
+impl From<CompressedChecked<AggregatedPublicKeys>> for AggregatedPublicKeys {
+    fn from(sig: CompressedChecked<AggregatedPublicKeys>) -> Self { sig.0 }
+}
 impl CanonicalDeserialize for AggregatedPublicKeys {
     fn deserialize_with_mode<R: ark_std::io::Read>(
         reader: R,
@@ -55,6 +63,7 @@ impl AggregatedPublicKeys {
     /// Shuffle cards and produce proof using system randomness
     ///
     /// Verified using `verify_shuffle`
+    #[cfg_attr(feature="wasm-bindgen", wasm_bindgen(serde))]
     pub fn shuffle_and_remask_(
         &self, deck: &[MaskedCard],
     ) -> Result<ShuffleMessage, CardProtocolError> {

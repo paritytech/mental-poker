@@ -9,6 +9,9 @@ use ark_std::{io::{Read,Write}, borrow::{BorrowMut}, vec::Vec, rand::{Rng,Crypto
 use ark_serialize::{Compress,Validate,Valid};
 
 #[cfg(feature="serde")]
+use ark_serialize::{CompressedChecked};
+
+#[cfg(feature="serde")]
 use serde::{Serialize, Deserialize};
 
 use cards_proofs::{
@@ -32,11 +35,14 @@ pub type PlayerSecretKey<C> = el_gamal::SecretKey<C>;
 /// (or an interface simplification).
 #[derive(Clone, CanonicalDeserialize, CanonicalSerialize)]
 #[cfg_attr(feature="serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature="serde", serde(from = "CompressedChecked<Self>", into = "CompressedChecked<Self>"))]
 pub struct PlayerKeypair<C: CurveGroup> {
-    #[cfg_attr(feature="serde", serde(with = "ark_serde_compat"))]
     pub sk: PlayerSecretKey<C>,
-    #[cfg_attr(feature="serde", serde(with = "ark_serde_compat"))]
     pub pk: PlayerPublicKey<C>,
+}
+#[cfg(feature="serde")]
+impl<C: CurveGroup> From<CompressedChecked<PlayerKeypair<C>>> for PlayerKeypair<C> {
+    fn from(sig: CompressedChecked<PlayerKeypair<C>>) -> Self { sig.0 }
 }
 
 pub type ZKProofKeyOwnership<C> = schnorr_identification::proof::Proof<C>;
@@ -113,11 +119,15 @@ impl<C: CurveGroup> Parameters<C> {
 /// as the player's public key, but drop it in `AggregatedPublicKeys`.
 #[derive(Clone,CanonicalDeserialize,CanonicalSerialize,Debug)]
 #[cfg_attr(feature="serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature="serde", serde(from = "CompressedChecked<Self>", into = "CompressedChecked<Self>"))]
 pub struct PlayerHello<C: CurveGroup> {
-    #[cfg_attr(feature="serde", serde(with = "ark_serde_compat"))]
     pk: PlayerPublicKey<C>,
-    #[cfg_attr(feature="serde", serde(with = "ark_serde_compat"))]
     ownership_proof: ZKProofKeyOwnership<C>,
+}
+
+#[cfg(feature="serde")]
+impl<C: CurveGroup> From<CompressedChecked<PlayerHello<C>>> for PlayerHello<C> {
+    fn from(sig: CompressedChecked<PlayerHello<C>>) -> Self { sig.0 }
 }
 
 impl<C: CurveGroup> PartialEq for PlayerHello<C> {

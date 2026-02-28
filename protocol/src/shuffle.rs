@@ -11,6 +11,9 @@ use ark_ec::{AffineRepr,CurveGroup};
 use ark_std::{borrow::{ToOwned}, ops::Deref, vec::Vec, Zero, rand::{Rng,CryptoRng}, UniformRand};
 
 #[cfg(feature="serde")]
+use ark_serialize::{CompressedChecked};
+
+#[cfg(feature="serde")]
 use serde::{Serialize, Deserialize};
 
 use cards_proofs::{
@@ -42,16 +45,19 @@ pub type ZKProofShuffle<C> = shuffle::proof::Proof<Scalar<C>, el_gamal::ElGamal<
 /// and spam prevention.
 #[derive(Clone,CanonicalSerialize,CanonicalDeserialize)]
 #[cfg_attr(feature="serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature="serde", serde(from = "CompressedChecked<Self>", into = "CompressedChecked<Self>"))]
 pub struct ShuffleMessage<C: CurveGroup> {
-    #[cfg_attr(feature="serde", serde(with = "ark_serde_compat"))]
     pub deck: Vec<MaskedCard<C>>,     // Should come first for bytes interfaces
-    #[cfg_attr(feature="serde", serde(with = "ark_serde_compat"))]
     pub proof: ZKProofShuffle<C>,
 }
 
 impl<C: CurveGroup> Deref for ShuffleMessage<C> {
     type Target = [MaskedCard<C>];
     fn deref(&self) -> &[MaskedCard<C>] { &self.deck }
+}
+#[cfg(feature="serde")]
+impl<C: CurveGroup> From<CompressedChecked<ShuffleMessage<C>>> for ShuffleMessage<C> {
+    fn from(sig: CompressedChecked<ShuffleMessage<C>>) -> Self { sig.0 }
 }
 
 fn pad_masked_cards<C: CurveGroup>(cards: &mut Vec<MaskedCard<C>>, padding: usize) {
