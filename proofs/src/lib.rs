@@ -4,6 +4,7 @@
 #[macro_use]
 extern crate std;
 
+#[cfg(not(feature = "std"))]
 #[macro_use]
 extern crate alloc;
 

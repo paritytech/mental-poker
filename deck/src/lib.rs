@@ -7,7 +7,7 @@ extern crate std;
 use ark_std::{
     // borrow::Borrow,
     boxed::Box,
-    io::{self, Write}, // Read
+    io,
     rand::Rng,
     UniformRand,
     // ops::Deref,
@@ -82,7 +82,7 @@ impl<A: AffineRepr> SortedDeck<A> {
     }
 
     #[cfg(feature = "std")]
-    pub fn to_code<W: Write>(&self, w: &mut W, name: &str) -> io::Result<()> {
+    pub fn to_code<W: io::Write>(&self, w: &mut W, name: &str) -> io::Result<()> {
         // let affine = affine.unwrap_or(std::any::type_name::<A>());
         let affine = "Affine";
         // writeln!(w, "use ark_ff::MontFp;")?;
@@ -95,7 +95,7 @@ impl<A: AffineRepr> SortedDeck<A> {
 }
 
 #[cfg(feature = "std")]
-pub fn write_point<W: Write>(w: &mut W, affine: &str, p: &impl AffineRepr) -> io::Result<()> {
+pub fn write_point<W: io::Write>(w: &mut W, affine: &str, p: &impl AffineRepr) -> io::Result<()> {
     if let Some((x, y)) = p.xy() {
         writeln!(w, "{}::new_unchecked(MontFp!(\"{:#?}\"), MontFp!(\"{:#?}\")),", affine, x, y)
     } else {
@@ -162,7 +162,7 @@ impl<'a, A: AffineRepr> IntoIterator for &'a SortedDeck<A> {
 
 impl<A: AffineRepr> CanonicalSerialize for SortedDeck<A> {
     #[inline]
-    fn serialize_with_mode<W: Write>(
+    fn serialize_with_mode<W: io::Write>(
         &self, mut writer: W, compress: Compress,
     ) -> Result<(), SerializationError> {
         self.0.serialize_with_mode(&mut writer, compress)

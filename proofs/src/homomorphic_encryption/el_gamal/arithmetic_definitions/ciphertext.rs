@@ -1,8 +1,8 @@
 use super::super::Ciphertext;
 use ark_ec::{AffineRepr, CurveGroup};
-use ark_std::{UniformRand, ops::Mul, Zero, rand::Rng};
+use ark_std::{UniformRand, ops::{Add,Mul}, Zero, rand::Rng};
 
-impl<C: CurveGroup> core::ops::Add<Ciphertext<C>> for Ciphertext<C> {
+impl<C: CurveGroup> Add<Ciphertext<C>> for Ciphertext<C> {
     type Output = Self;
 
     fn add(self, _rhs: Self) -> Self {
