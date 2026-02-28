@@ -32,7 +32,7 @@ anyhow = "1.0.55"
 
 [features]
 default = ["std"]
-std = ["ark-std/std", "ark-ec/std", "ark-ff/std", "ark-serialize/std"]
+std = ["ark-std/std", "ark-ec/std", "ark-ff/std", "ark-serialize/std", "cards-proofs/std", "cards-deck/std"]
 serde = ["dep:serde", "dep:ark-serde-compat"]
 
 [[example]]

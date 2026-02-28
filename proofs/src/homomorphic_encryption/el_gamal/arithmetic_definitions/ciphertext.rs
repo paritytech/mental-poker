@@ -2,7 +2,7 @@ use super::super::Ciphertext;
 use ark_ec::{AffineRepr, CurveGroup};
 use ark_std::{UniformRand, ops::Mul, Zero, rand::Rng};
 
-impl<C: CurveGroup> std::ops::Add<Ciphertext<C>> for Ciphertext<C> {
+impl<C: CurveGroup> core::ops::Add<Ciphertext<C>> for Ciphertext<C> {
     type Output = Self;
 
     fn add(self, _rhs: Self) -> Self {
@@ -17,7 +17,7 @@ impl<C: CurveGroup> Mul<C::ScalarField> for Ciphertext<C> {
     }
 }
 
-impl<C: CurveGroup> std::iter::Sum for Ciphertext<C> {
+impl<C: CurveGroup> core::iter::Sum for Ciphertext<C> {
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
         iter.fold(Self(C::Affine::zero(), C::Affine::zero()), |a, b| a + b)
     }

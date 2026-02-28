@@ -1,6 +1,6 @@
 use crate::error::*;
 use ark_ff::Field;
-use std::iter::Sum;
+use core::iter::Sum;
 use ark_std::{ops::Mul, vec::Vec};
 
 /// Compute the dot product (inner product) of two vectors
