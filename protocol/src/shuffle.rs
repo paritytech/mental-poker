@@ -10,6 +10,9 @@ use super::{
 use ark_ec::{AffineRepr,CurveGroup};
 use ark_std::{borrow::{ToOwned}, ops::Deref, vec::Vec, Zero, rand::{Rng,CryptoRng}, UniformRand};
 
+#[cfg(feature="serde")]
+use serde::{Serialize, Deserialize};
+
 use cards_proofs::{
     error::CryptoError,
     homomorphic_encryption::el_gamal,
@@ -38,9 +41,17 @@ pub type ZKProofShuffle<C> = shuffle::proof::Proof<Scalar<C>, el_gamal::ElGamal<
 /// and shuffles though, so you'll want some signed wrapper for consensus
 /// and spam prevention.
 #[derive(Clone,CanonicalSerialize,CanonicalDeserialize)]
+#[cfg_attr(feature="serde", derive(Serialize, Deserialize))]
 pub struct ShuffleMessage<C: CurveGroup> {
-    pub deck: Vec<MaskedCard<C>>,
+    #[cfg_attr(feature="serde", serde(with = "ark_serde_compat"))]
+    pub deck: Vec<MaskedCard<C>>,     // Should come first for bytes interfaces
+    #[cfg_attr(feature="serde", serde(with = "ark_serde_compat"))]
     pub proof: ZKProofShuffle<C>,
+}
+
+impl<C: CurveGroup> Deref for ShuffleMessage<C> {
+    type Target = [MaskedCard<C>];
+    fn deref(&self) -> &[MaskedCard<C>] { &self.deck }
 }
 
 fn pad_masked_cards<C: CurveGroup>(cards: &mut Vec<MaskedCard<C>>, padding: usize) {

@@ -1,7 +1,7 @@
 [package]
 name = "cards-protocol"
 version.workspace = true
-authors.workspace = true
+authors = ["Jeffrey Burdges <jeff@web3.foundation>", "Geometry Research (https://geometryresearch.xyz)"]
 edition.workspace = true
 homepage.workspace = true
 repository.workspace = true
@@ -21,6 +21,9 @@ thiserror.workspace = true
 cards-proofs.workspace = true
 cards-deck.workspace = true
 
+serde = { workspace = true, optional = true }
+ark-serde-compat = { workspace = true, optional = true }
+
 [dev-dependencies]
 rand.workspace = true
 ark-secp256k1.workspace = true
@@ -30,6 +33,7 @@ anyhow = "1.0.55"
 [features]
 default = ["std"]
 std = ["ark-std/std", "ark-ec/std", "ark-ff/std", "ark-serialize/std", "cards-proofs/std", "cards-deck/std"]
+serde = ["dep:serde", "dep:ark-serde-compat"]
 
 [[example]]
 name = "round"

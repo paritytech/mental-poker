@@ -6,6 +6,10 @@ use crate::{
 
 use ark_ec::{AffineRepr,CurveGroup};
 use ark_std::{io::{Read,Write}, borrow::{BorrowMut}, vec::Vec, rand::{Rng,CryptoRng}};
+use ark_serialize::{Compress,Validate,Valid};
+
+#[cfg(feature="serde")]
+use serde::{Serialize, Deserialize};
 
 use cards_proofs::{
     error::CryptoError,
@@ -27,8 +31,11 @@ pub type PlayerSecretKey<C> = el_gamal::SecretKey<C>;
 /// We include the player's public key as a performance optimization
 /// (or an interface simplification).
 #[derive(Clone, CanonicalDeserialize, CanonicalSerialize)]
+#[cfg_attr(feature="serde", derive(Serialize, Deserialize))]
 pub struct PlayerKeypair<C: CurveGroup> {
+    #[cfg_attr(feature="serde", serde(with = "ark_serde_compat"))]
     pub sk: PlayerSecretKey<C>,
+    #[cfg_attr(feature="serde", serde(with = "ark_serde_compat"))]
     pub pk: PlayerPublicKey<C>,
 }
 
@@ -105,8 +112,11 @@ impl<C: CurveGroup> Parameters<C> {
 /// As an interface simplification, we typically use this hello message
 /// as the player's public key, but drop it in `AggregatedPublicKeys`.
 #[derive(Clone,CanonicalDeserialize,CanonicalSerialize,Debug)]
+#[cfg_attr(feature="serde", derive(Serialize, Deserialize))]
 pub struct PlayerHello<C: CurveGroup> {
+    #[cfg_attr(feature="serde", serde(with = "ark_serde_compat"))]
     pk: PlayerPublicKey<C>,
+    #[cfg_attr(feature="serde", serde(with = "ark_serde_compat"))]
     ownership_proof: ZKProofKeyOwnership<C>,
 }
 
@@ -174,7 +184,7 @@ impl<'p, C: CurveGroup> AggregatedPublicKeys<'p, C> {
         t.append(&self.players_public_keys);
     }
 
-    #[allow(dead_code)]
+    // #[allow(dead_code)]
     pub(crate) fn add_unchecked(&mut self, pk: PlayerPublicKey<C>) {
         self.aggregated_key = (self.aggregated_key + pk).into_affine();
         self.players_public_keys.push(pk);
@@ -237,21 +247,49 @@ impl<'p, C: CurveGroup> AggregatedPublicKeys<'p, C> {
         .collect()
     }
 
-    /// One public key per player, plus 4 byte size.
-    pub fn serialized_size(&self) -> usize {
-        self.players_public_keys.compressed_size()
-    }
-
-    pub fn serialize<W: Write>(&self, w: W) -> Result<(), SerializationError> {
-        self.players_public_keys.serialize_compressed(w)
-    }
-
-    /// Deserialize `AggregatedPublicKeys` from a serialized `Vec<PlayerPublicKey<C>>`,
-    /// without checking anything.
-    pub fn deserialize<R: Read>(r: R, parameters: &'p Parameters<C>) -> Result<AggregatedPublicKeys<'p,C>,SerializationError> {
-        let players_public_keys = <Vec<PlayerPublicKey<C>> as CanonicalDeserialize>::deserialize_compressed(r)?;
+    /// Deserialize `AggregatedPublicKeys` from a serialized `Vec<PlayerPublicKey<C>>`.  // without checking anything.
+    pub fn deserialize_with_mode<R: Read>(
+        reader: R,
+        compress: Compress,
+        validate: Validate,
+        parameters: &'p Parameters<C>,
+    ) -> Result<AggregatedPublicKeys<'p,C>, SerializationError> 
+    {
+        let players_public_keys = <Vec<PlayerPublicKey<C>> as CanonicalDeserialize>::deserialize_with_mode(reader,compress,validate)?;
         let apk: C = players_public_keys.iter().sum();
         Ok(AggregatedPublicKeys { parameters, aggregated_key: apk.into_affine(), players_public_keys, })
+    }
+
+    /// Deserialize `AggregatedPublicKeys` from a serialized `Vec<PlayerPublicKey<C>>`.   // without checking anything.
+    pub fn deserialize_compressed<R: Read>(r: R, parameters: &'p Parameters<C>) -> Result<AggregatedPublicKeys<'p,C>,SerializationError> {
+        Self::deserialize_with_mode(r,Compress::Yes,Validate::Yes,parameters)
+    }
+}
+
+impl<'p, C: CurveGroup> CanonicalSerialize for AggregatedPublicKeys<'p, C> {
+    /// One public key per player, plus 4 byte size.
+    fn serialize_with_mode<W: Write>(
+        &self,
+        writer: W,
+        compress: Compress,
+    ) -> Result<(), SerializationError> {
+        self.players_public_keys.serialize_with_mode(writer,compress)
+    }
+
+    fn serialized_size(&self, compress: Compress) -> usize {
+        self.players_public_keys.serialized_size(compress)
+    }
+}
+impl<'p, C: CurveGroup> Valid for AggregatedPublicKeys<'p, C> {
+    fn check(&self) -> Result<(), SerializationError> {
+        self.players_public_keys.check()
+    }
+    fn batch_check<'a>(
+        batch: impl Iterator<Item = &'a Self> + Send,
+    ) -> Result<(), SerializationError>
+    where Self: 'a, 
+    {
+        Valid::batch_check(batch.flat_map(|v| v.players_public_keys.iter()))        
     }
 }
 

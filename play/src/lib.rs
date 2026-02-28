@@ -1,14 +1,19 @@
-// use wasm_bindgen::prelude::*;
 
 use getrandom_or_panic::getrandom_or_panic;
 
-pub mod serialize;
-pub use serialize::{MyDeserialize, MySerialize};
+// use wasm_bindgen::prelude::*;
+
+// pub mod serialize;
+// pub use serialize::{MyDeserialize, MySerialize};
 
 pub use cards_protocol::error::CardProtocolError;
+// pub use cards_proofs::error::CryptoError;
 
 mod keys;
-pub use keys::AggregatedPublicKeysExt;
+pub use keys::*;
+
+mod reveals;
+pub use reveals::*;
 
 #[cfg(test)]
 pub mod more;
@@ -23,6 +28,10 @@ pub type Affine = ark_secp256k1::Affine;
 
 pub use deck_secp256k1::{DECK, PARAMS};
 
+pub fn zero_mask_deck() -> Vec<MaskedCard> {
+    cards_protocol::masking::zero_mask_cards(DECK)
+}
+
 // cards_protocol
 
 pub type MaskedCard = cards_protocol::MaskedCard<Curve>;
@@ -36,14 +45,15 @@ pub type Parameters = cards_protocol::setup::Parameters<Curve>;
 
 pub type PlayerKeypair = cards_protocol::keys::PlayerKeypair<Curve>;
 pub type PlayerHello = cards_protocol::keys::PlayerHello<Curve>;
-pub type AggregatedPublicKeys = cards_protocol::keys::AggregatedPublicKeys<'static, Curve>;
+pub type PlayerPublicKey = cards_protocol::keys::PlayerPublicKey<Curve>;
+// pub type AggregatedPublicKeys = cards_protocol::keys::AggregatedPublicKeys<'static, Curve>;
 
 // cards_protocol::reveal
 
 pub type RevealToken = cards_protocol::reveal::RevealToken<Curve>;
 pub type RevealMessage = cards_protocol::reveal::RevealMessage<Curve>;
 pub type RevealsMerged = cards_protocol::reveal::RevealsMerged<Curve>;
-pub type AccumulateReveals = cards_protocol::reveal::AccumulateReveals<'static, Curve>;
+// pub type AccumulateReveals = cards_protocol::reveal::AccumulateReveals<'static, Curve>;
 
 // cards_protocol::shuffle
 
