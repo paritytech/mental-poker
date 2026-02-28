@@ -4,10 +4,9 @@ use super::{Parameters, Statement, Witness, proof::Proof};
 
 
 use ark_ec::{CurveGroup, VariableBaseMSM}; // ark_ec::scalar_mul::variable_base
-use ark_std::{borrow::BorrowMut, rand::{Rng, CryptoRng}};
+use ark_std::{borrow::BorrowMut, marker::PhantomData, rand::{Rng, CryptoRng}};
 
 
-use core::marker::PhantomData;
 
 pub struct Prover<C: CurveGroup> {
     phantom: PhantomData<C>,

@@ -32,7 +32,7 @@ wasm-bindgen-test = "0.3.29"
 
 [features]
 default = ["std"]
-std = ["ark-std/std", "ark-ec/std", "ark-ff/std", "ark-serialize/std", "ark-transcript/std"]
+std = ["ark-std/std", "ark-ec/std", "ark-ff/std", "ark-serialize/std"] # "ark-transcript/std"
 
 [[bench]]
 name = "shuffle"

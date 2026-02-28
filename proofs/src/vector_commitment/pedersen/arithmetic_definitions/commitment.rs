@@ -1,7 +1,7 @@
 use super::super::Commitment;
 use ark_ec::{AffineRepr, CurveGroup};
 use ark_ff::Zero;
-use ark_std::{ops::Mul, rand::Rng, UniformRand};
+use ark_std::{ops::{Add,Mul}, rand::Rng, UniformRand};
 
 impl<C: CurveGroup> Mul<C::ScalarField> for Commitment<C> {
     type Output = Self;
@@ -10,7 +10,7 @@ impl<C: CurveGroup> Mul<C::ScalarField> for Commitment<C> {
     }
 }
 
-impl<C: CurveGroup> core::ops::Add for Commitment<C> {
+impl<C: CurveGroup> Add for Commitment<C> {
     type Output = Self;
 
     fn add(self, _rhs: Self) -> Self {
