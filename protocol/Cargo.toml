@@ -22,6 +22,7 @@ cards-proofs.workspace = true
 cards-deck.workspace = true
 
 serde = { workspace = true, optional = true, features = ["derive"] }
+# wasm-bindgen = { workspace = true, optional = true }
 
 [dev-dependencies]
 rand.workspace = true
@@ -33,6 +34,7 @@ anyhow = "1.0.55"
 default = ["std"]
 std = ["ark-std/std", "ark-ec/std", "ark-ff/std", "ark-serialize/std", "cards-proofs/std", "cards-deck/std"]
 serde = ["dep:serde"]
+# wasm-bindgen = ["dep:wasm-bindgen"]
 
 [[example]]
 name = "round"

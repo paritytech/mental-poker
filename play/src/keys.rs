@@ -64,10 +64,10 @@ impl AggregatedPublicKeys {
     ///
     /// Verified using `verify_shuffle`
     #[cfg_attr(feature="wasm-bindgen", wasm_bindgen(serde))]
-    pub fn shuffle_and_remask_(
+    pub fn shuffle_and_remask(
         &self, deck: &[MaskedCard],
     ) -> Result<ShuffleMessage, CardProtocolError> {
-        self.shuffle_and_remask(&mut getrandom_or_panic(), deck)
+        self.0.shuffle_and_remask(&mut getrandom_or_panic(), deck)
     }
     
     pub fn verify_quit<'a,'b>(
@@ -99,17 +99,3 @@ pub fn verify_merged_reveals<'a,'b>(
 }
 
 
-//
-// On AggregatedPublicKeys::
-//
-
-/*
-#[cfg(feature = "bytes")]
-pub mod bytes {
-    pub fn generate_player(
-        player_public_info: impl IntoTranscript,
-    ) -> (PlayerHello, PlayerKeypair) {
-        super::generate_player
-    }
-}
-*/
