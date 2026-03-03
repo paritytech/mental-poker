@@ -9,6 +9,7 @@ use serde::{Serialize, Deserialize};
 #[cfg(feature="wasm-bindgen")]
 use wasm_bindgen::prelude::*;
 
+
 pub fn generate_player(
     player_public_info: impl IntoTranscript,
 ) -> (PlayerHello, PlayerKeypair) {
@@ -18,9 +19,11 @@ pub fn generate_player(
 pub fn verify_player(
     pk: &PlayerHello,
     player_public_info: impl IntoTranscript,
-) -> Result<(), CardProtocolError> {
+) -> Result<&PlayerPublicKey, CardProtocolError> {
     Ok(PARAMS.verify_player(pk,player_public_info)?)
 }
+
+
 
 type ApkInner = cards_protocol::keys::AggregatedPublicKeys<'static, Curve>;
 

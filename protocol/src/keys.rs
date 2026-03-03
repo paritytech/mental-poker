@@ -8,12 +8,6 @@ use ark_ec::{AffineRepr,CurveGroup};
 use ark_std::{io::{Read,Write}, borrow::{BorrowMut}, vec::Vec, rand::{Rng,CryptoRng}};
 use ark_serialize::{Compress,Validate,Valid};
 
-#[cfg(feature="serde")]
-use ark_serialize::{CompressedChecked};
-
-#[cfg(feature="serde")]
-use serde::{Serialize, Deserialize};
-
 use cards_proofs::{
     error::CryptoError,
     homomorphic_encryption::{
@@ -24,6 +18,13 @@ use cards_proofs::{
         ArgumentOfKnowledge,
     },
 };
+
+#[cfg(feature="serde")]
+use ark_serialize::{CompressedChecked};
+
+#[cfg(feature="serde")]
+use serde::{Serialize, Deserialize};
+
 
 pub type PlayerPublicKey<C> = el_gamal::PublicKey<C>;
 pub type AggregatePublicKey<C> = el_gamal::PublicKey<C>;
@@ -104,12 +105,13 @@ impl<C: CurveGroup> Parameters<C> {
         (PlayerHello { pk: key.pk, ownership_proof },key)
     }
 
-    pub fn verify_player(
+    pub fn verify_player<'a>(
         &self,
-        pk: &PlayerHello<C>,
+        pk: &'a PlayerHello<C>,
         player_public_info: impl IntoTranscript,
-    ) -> Result<(), CryptoError> {
-        self.verify_key_ownership(&pk.pk, player_public_info, &pk.ownership_proof)
+    ) -> Result<&'a PlayerPublicKey<C>, CryptoError> {
+        self.verify_key_ownership(&pk.pk, player_public_info, &pk.ownership_proof)?;
+        Ok(&pk.pk)
     }
 }
 
