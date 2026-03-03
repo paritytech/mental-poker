@@ -28,7 +28,6 @@ thiserror.workspace = true
 rand.workspace = true
 ark-secp256k1.workspace = true
 criterion = "0.3"
-wasm-bindgen-test = "0.3.29"
 
 [features]
 default = ["std"]

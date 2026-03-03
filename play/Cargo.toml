@@ -32,7 +32,9 @@ serde = { workspace = true, optional = true, features = ["derive"] }
 wasm-bindgen = { workspace = true, optional = true }
 
 [dev-dependencies]
-anyhow = "1.0.55"
+# anyhow = "1.0.55"
+# wasm-bindgen-test = "0.3.29"
+
 
 
 [lib]
