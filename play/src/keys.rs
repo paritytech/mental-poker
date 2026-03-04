@@ -6,9 +6,6 @@ use ark_serialize::{CanonicalSerialize,CanonicalDeserialize,SerializationError,C
 #[cfg(feature="serde")]
 use serde::{Serialize, Deserialize};
 
-#[cfg(feature="wasm-bindgen")]
-use wasm_bindgen::prelude::*;
-
 pub fn generate_player(
     player_public_info: impl IntoTranscript,
 ) -> (PlayerHello, PlayerKeypair) {
@@ -63,7 +60,6 @@ impl AggregatedPublicKeys {
     /// Shuffle cards and produce proof using system randomness
     ///
     /// Verified using `verify_shuffle`
-    #[cfg_attr(feature="wasm-bindgen", wasm_bindgen(serde))]
     pub fn shuffle_and_remask_(
         &self, deck: &[MaskedCard],
     ) -> Result<ShuffleMessage, CardProtocolError> {

@@ -52,5 +52,5 @@ serde = { version = "1", default-features = false, features = ["derive"] }
 wasm-bindgen = { version = "0.2.100", default-features = false }
 
 [patch.crates-io]
-ark-serialize = { git = "https://github.com/arkworks-rs/algebra?rev=serde", rev = "bf1c9b2" }
+ark-serialize = { git = "https://github.com/arkworks-rs/algebra", rev = "bf1c9b22b30325ef4df4f701dedcb6dea904c587" }
 

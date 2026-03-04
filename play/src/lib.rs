@@ -15,6 +15,9 @@ pub use keys::*;
 mod reveals;
 pub use reveals::*;
 
+#[cfg(feature = "wasm-bindgen")]
+pub mod wasm;
+
 #[cfg(test)]
 pub mod more;
 
