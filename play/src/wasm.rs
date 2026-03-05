@@ -2,7 +2,14 @@ use wasm_bindgen::prelude::*;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use cards_deck::Deck;
 
-use crate::*;
+// Alias inner types to avoid shadowing our exported wasm_bindgen structs.
+use crate::PlayerHello as InnerPlayerHello;
+use crate::PlayerKeypair as InnerPlayerKeypair;
+use crate::MaskedCard as InnerMaskedCard;
+use crate::ShuffleMessage as InnerShuffleMessage;
+use crate::RevealMessage as InnerRevealMessage;
+use crate::AggregatedPublicKeys as InnerAggregatedPublicKeys;
+use crate::{DECK, PARAMS, CardProtocolError};
 
 fn ser<T: CanonicalSerialize>(val: &T) -> Vec<u8> {
     let mut bytes = Vec::new();
@@ -15,62 +22,71 @@ fn de<T: CanonicalDeserialize>(bytes: &[u8]) -> Result<T, JsError> {
     T::deserialize_compressed(bytes).map_err(|e| JsError::new(&format!("{e}")))
 }
 
-/// Generate a player keypair. `name` is the raw 32-byte AccountId
-/// (SCALE-encoded AccountId32 = raw bytes for fixed-size arrays).
-///
-/// Returns: `[hello_len as u32 LE][hello_bytes][keypair_bytes]`
-#[wasm_bindgen]
-pub fn generate_player(name: &[u8]) -> Result<Vec<u8>, JsError> {
-    let (hello, keypair) = crate::generate_player(name);
-    let hello_bytes = ser(&hello);
-    let keypair_bytes = ser(&keypair);
-    let hello_len = (hello_bytes.len() as u32).to_le_bytes();
-    let mut out = hello_len.to_vec();
-    out.extend(hello_bytes);
-    out.extend(keypair_bytes);
-    Ok(out)
+fn proto_err(e: CardProtocolError) -> JsError {
+    JsError::new(&format!("{e:?}"))
 }
 
-/// Extract the serialized PlayerHello from generate_player output.
-/// This is what gets submitted on-chain via `register_player`.
+// ---------------------------------------------------------------------------
+// Opaque wrapper types
+// ---------------------------------------------------------------------------
+
+/// Result of key generation — contains a player's hello message and secret keypair.
 #[wasm_bindgen]
-pub fn extract_hello(player_data: &[u8]) -> Result<Vec<u8>, JsError> {
-    if player_data.len() < 4 {
-        return Err(JsError::new("player data too short"));
-    }
-    let hello_len = u32::from_le_bytes(
-        player_data[..4]
-            .try_into()
-            .map_err(|_| JsError::new("bad length prefix"))?,
-    ) as usize;
-    if player_data.len() < 4 + hello_len {
-        return Err(JsError::new("player data truncated"));
-    }
-    Ok(player_data[4..4 + hello_len].to_vec())
+pub struct PlayerData {
+    hello: InnerPlayerHello,
+    keypair: InnerPlayerKeypair,
 }
 
-/// Extract the serialized PlayerKeypair from generate_player output.
-/// Keep this secret — needed for shuffling reveals.
+/// A player's public hello message (public key + proof-of-knowledge).
+/// Submit on-chain via `register_player`.
 #[wasm_bindgen]
-pub fn extract_keypair(player_data: &[u8]) -> Result<Vec<u8>, JsError> {
-    if player_data.len() < 4 {
-        return Err(JsError::new("player data too short"));
-    }
-    let hello_len = u32::from_le_bytes(
-        player_data[..4]
-            .try_into()
-            .map_err(|_| JsError::new("bad length prefix"))?,
-    ) as usize;
-    if player_data.len() < 4 + hello_len {
-        return Err(JsError::new("player data truncated"));
-    }
-    Ok(player_data[4 + hello_len..].to_vec())
+pub struct PlayerHello(InnerPlayerHello);
+
+/// A player's secret keypair. Never leaves WASM — used to produce reveals.
+#[wasm_bindgen]
+pub struct PlayerKeypair(InnerPlayerKeypair);
+
+/// A deck of masked (encrypted) cards.
+#[wasm_bindgen]
+pub struct MaskedDeck(Vec<InnerMaskedCard>);
+
+/// A single masked (encrypted) card.
+#[wasm_bindgen]
+pub struct MaskedCard(InnerMaskedCard);
+
+/// Aggregated public keys for all players in a game.
+/// Constructed from on-chain data after all players register.
+#[wasm_bindgen]
+pub struct AggregatedKeys(InnerAggregatedPublicKeys);
+
+/// A shuffle message containing the re-encrypted deck and a ZK proof.
+/// Submit on-chain via `submit_shuffle`.
+#[wasm_bindgen]
+pub struct ShuffleMessage(InnerShuffleMessage);
+
+/// A reveal message for a single card from a single player.
+/// Submit on-chain via `submit_reveal`.
+#[wasm_bindgen]
+pub struct RevealMessage(InnerRevealMessage);
+
+/// Collector for reveal messages. Feed all N reveals then unmask.
+#[wasm_bindgen]
+pub struct Reveals(Vec<InnerRevealMessage>);
+
+// ---------------------------------------------------------------------------
+// Free functions
+// ---------------------------------------------------------------------------
+
+/// Generate a player keypair. `name` is the raw 32-byte AccountId.
+#[wasm_bindgen]
+pub fn generate_player(name: &[u8]) -> Result<PlayerData, JsError> {
+    let (hello, keypair) = crate::keys::generate_player(name);
+    Ok(PlayerData { hello, keypair })
 }
 
-/// Create zero-masked deck from the first `count` static deck plaintexts.
-/// Returns serialized `Vec<MaskedCard>`.
+/// Create a zero-masked deck from the first `count` static deck plaintexts.
 #[wasm_bindgen]
-pub fn zero_mask_deck(count: u32) -> Result<Vec<u8>, JsError> {
+pub fn zero_mask_deck(count: u32) -> Result<MaskedDeck, JsError> {
     let count = count as usize;
     if count > DECK.len() {
         return Err(JsError::new(&format!(
@@ -79,94 +95,187 @@ pub fn zero_mask_deck(count: u32) -> Result<Vec<u8>, JsError> {
             DECK.len()
         )));
     }
-    let plaintexts = &DECK[..count];
-    let masked = cards_protocol::masking::zero_mask_cards(plaintexts);
-    Ok(ser(&masked))
+    let masked = cards_protocol::masking::zero_mask_cards(&DECK[..count]);
+    Ok(MaskedDeck(masked))
 }
 
-/// Shuffle the deck using aggregate public keys.
-///
-/// `agg_key_bytes`: serialized AggregatedPublicKeys (from chain's AggregateKeyData storage).
-/// `deck_bytes`: serialized `Vec<MaskedCard>` (from chain's CurrentDeck storage).
-///
-/// Returns serialized `ShuffleMessage` (deck + ZK proof), to submit via `submit_shuffle`.
-#[wasm_bindgen]
-pub fn shuffle_deck(agg_key_bytes: &[u8], deck_bytes: &[u8]) -> Result<Vec<u8>, JsError> {
-    let apk: AggregatedPublicKeys = de(agg_key_bytes)?;
-    let deck: Vec<MaskedCard> = de(deck_bytes)?;
-    let shuffle_msg = apk
-        .shuffle_and_remask_(&deck)
-        .map_err(|e| JsError::new(&format!("shuffle failed: {e:?}")))?;
-    Ok(ser(&shuffle_msg))
-}
-
-/// Produce a reveal token for a single masked card.
-///
-/// `keypair_bytes`: serialized PlayerKeypair (from extract_keypair).
-/// `card_bytes`: serialized MaskedCard (from get_masked_card).
-///
-/// Returns serialized `RevealMessage`. Submit on-chain via `submit_reveal`,
-/// or keep locally if this player is the card recipient.
-#[wasm_bindgen]
-pub fn prove_reveal_token(keypair_bytes: &[u8], card_bytes: &[u8]) -> Result<Vec<u8>, JsError> {
-    let keypair: PlayerKeypair = de(keypair_bytes)?;
-    let card: MaskedCard = de(card_bytes)?;
-    let reveal_msg = PARAMS.prove_single_reveal_token(&mut getrandom_or_panic(), &keypair, &card);
-    Ok(ser(&reveal_msg))
-}
-
-/// Unmask a card given all N reveal messages (one per player).
-///
-/// `reveal_msgs_bytes`: serialized `Vec<RevealMessage>` (all N players' reveals).
-/// `card_bytes`: serialized `MaskedCard` being revealed.
-///
-/// Returns the deck position as u32. Use `card_type()` in TS to map to game meaning.
-#[wasm_bindgen]
-pub fn unmask_card(reveal_msgs_bytes: &[u8], card_bytes: &[u8]) -> Result<u32, JsError> {
-    let reveals: Vec<RevealMessage> = de(reveal_msgs_bytes)?;
-    let card: MaskedCard = de(card_bytes)?;
-    let unmasked = PARAMS
-        .unmask(&reveals, &card)
-        .map_err(|e| JsError::new(&format!("unmask failed: {e:?}")))?;
-    let point = unmasked.0;
-    let position = deck_secp256k1::DECK_SECP256K1
-        .decode(&point)
-        .ok_or_else(|| JsError::new("card not in deck"))?;
-    Ok(position as u32)
-}
-
-/// Extract a single masked card from a serialized deck by index.
-/// Returns serialized `MaskedCard`.
-#[wasm_bindgen]
-pub fn get_masked_card(deck_bytes: &[u8], index: u32) -> Result<Vec<u8>, JsError> {
-    let deck: Vec<MaskedCard> = de(deck_bytes)?;
-    let card = deck.get(index as usize).ok_or_else(|| {
-        JsError::new(&format!(
-            "card index {} out of range {}",
-            index,
-            deck.len()
-        ))
-    })?;
-    Ok(ser(card))
-}
-
-/// Extract the shuffled deck from a serialized ShuffleMessage.
-/// Returns serialized `Vec<MaskedCard>`.
-#[wasm_bindgen]
-pub fn get_shuffled_deck(shuffle_msg_bytes: &[u8]) -> Result<Vec<u8>, JsError> {
-    let shuffle_msg: ShuffleMessage = de(shuffle_msg_bytes)?;
-    Ok(ser(&shuffle_msg.deck))
-}
-
-/// Return the number of cards in a serialized `Vec<MaskedCard>`.
-#[wasm_bindgen]
-pub fn deck_card_count(deck_bytes: &[u8]) -> Result<u32, JsError> {
-    let deck: Vec<MaskedCard> = de(deck_bytes)?;
-    Ok(deck.len() as u32)
-}
-
-/// Return the maximum supported deck size (200 for secp256k1).
+/// Maximum supported deck size (200 for secp256k1).
 #[wasm_bindgen]
 pub fn max_deck_size() -> u32 {
     DECK.len() as u32
+}
+
+// ---------------------------------------------------------------------------
+// PlayerData
+// ---------------------------------------------------------------------------
+
+#[wasm_bindgen]
+impl PlayerData {
+    /// Extract the public hello message.
+    pub fn hello(&self) -> PlayerHello {
+        PlayerHello(self.hello.clone())
+    }
+
+    /// Extract the secret keypair.
+    pub fn keypair(&self) -> PlayerKeypair {
+        PlayerKeypair(self.keypair.clone())
+    }
+}
+
+// ---------------------------------------------------------------------------
+// PlayerHello
+// ---------------------------------------------------------------------------
+
+#[wasm_bindgen]
+impl PlayerHello {
+    /// Serialize for on-chain submission (`register_player`).
+    pub fn to_bytes(&self) -> Vec<u8> {
+        ser(&self.0)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// MaskedDeck
+// ---------------------------------------------------------------------------
+
+#[wasm_bindgen]
+impl MaskedDeck {
+    /// Deserialize from on-chain `CurrentDeck` storage.
+    pub fn from_bytes(bytes: &[u8]) -> Result<MaskedDeck, JsError> {
+        Ok(MaskedDeck(de(bytes)?))
+    }
+
+    /// Serialize for on-chain submission (`submit_masked_deck`).
+    pub fn to_bytes(&self) -> Vec<u8> {
+        ser(&self.0)
+    }
+
+    /// Number of cards in the deck.
+    pub fn card_count(&self) -> u32 {
+        self.0.len() as u32
+    }
+
+    /// Get a single card by index.
+    pub fn get_card(&self, index: u32) -> Result<MaskedCard, JsError> {
+        self.0
+            .get(index as usize)
+            .map(|c| MaskedCard(*c))
+            .ok_or_else(|| {
+                JsError::new(&format!(
+                    "card index {} out of range {}",
+                    index,
+                    self.0.len()
+                ))
+            })
+    }
+}
+
+// ---------------------------------------------------------------------------
+// MaskedCard
+// ---------------------------------------------------------------------------
+
+#[wasm_bindgen]
+impl MaskedCard {
+    /// Produce a reveal message for this card using the player's secret keypair.
+    pub fn prove_reveal(&self, keypair: &PlayerKeypair) -> RevealMessage {
+        let msg = PARAMS.prove_single_reveal_token(
+            &mut getrandom_or_panic::getrandom_or_panic(),
+            &keypair.0,
+            &self.0,
+        );
+        RevealMessage(msg)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// AggregatedKeys
+// ---------------------------------------------------------------------------
+
+#[wasm_bindgen]
+impl AggregatedKeys {
+    /// Deserialize from on-chain `AggregateKeyData` storage.
+    pub fn from_bytes(bytes: &[u8]) -> Result<AggregatedKeys, JsError> {
+        Ok(AggregatedKeys(de(bytes)?))
+    }
+
+    /// Shuffle and re-mask the deck, producing a ZK proof.
+    pub fn shuffle(&self, deck: &MaskedDeck) -> Result<ShuffleMessage, JsError> {
+        let msg = self.0.shuffle_and_remask_(&deck.0).map_err(proto_err)?;
+        Ok(ShuffleMessage(msg))
+    }
+}
+
+// ---------------------------------------------------------------------------
+// ShuffleMessage
+// ---------------------------------------------------------------------------
+
+#[wasm_bindgen]
+impl ShuffleMessage {
+    /// Serialize for on-chain submission (`submit_shuffle`).
+    pub fn to_bytes(&self) -> Vec<u8> {
+        ser(&self.0)
+    }
+
+    /// Extract the shuffled deck from this message.
+    pub fn deck(&self) -> MaskedDeck {
+        MaskedDeck(self.0.deck.clone())
+    }
+}
+
+// ---------------------------------------------------------------------------
+// RevealMessage
+// ---------------------------------------------------------------------------
+
+#[wasm_bindgen]
+impl RevealMessage {
+    /// Serialize for on-chain submission (`submit_reveal`).
+    pub fn to_bytes(&self) -> Vec<u8> {
+        ser(&self.0)
+    }
+
+    /// Deserialize a reveal message read from on-chain storage.
+    pub fn from_bytes(bytes: &[u8]) -> Result<RevealMessage, JsError> {
+        Ok(RevealMessage(de(bytes)?))
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Reveals (collector)
+// ---------------------------------------------------------------------------
+
+#[wasm_bindgen]
+impl Reveals {
+    /// Create an empty reveal collector.
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Reveals {
+        Reveals(Vec::new())
+    }
+
+    /// Add a reveal message (clones internally — caller keeps their copy).
+    pub fn add(&mut self, msg: &RevealMessage) {
+        self.0.push(msg.0.clone());
+    }
+
+    /// Add a reveal message from serialized bytes.
+    pub fn add_from_bytes(&mut self, bytes: &[u8]) -> Result<(), JsError> {
+        self.0.push(de(bytes)?);
+        Ok(())
+    }
+
+    /// Number of reveals collected so far.
+    pub fn count(&self) -> u32 {
+        self.0.len() as u32
+    }
+
+    /// Unmask the card using all collected reveals.
+    /// Returns the deck position (use `cardType()` in TS to map to game meaning).
+    pub fn unmask(&self, card: &MaskedCard) -> Result<u32, JsError> {
+        let unmasked = PARAMS
+            .unmask(&self.0, &card.0)
+            .map_err(|e| JsError::new(&format!("unmask failed: {e:?}")))?;
+        let position = deck_secp256k1::DECK_SECP256K1
+            .decode(&unmasked.0)
+            .ok_or_else(|| JsError::new("card not in deck"))?;
+        Ok(position as u32)
+    }
 }
