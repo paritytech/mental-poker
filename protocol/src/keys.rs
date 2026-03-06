@@ -88,11 +88,18 @@ impl<C: CurveGroup> Parameters<C> {
         let t = t.borrow_mut();
         t.label(KEY_OWN_RNG_SEED);
         schnorr_identification::SchnorrIdentification::verify(
-            &self.enc_parameters.generator,
-            pk,
-            proof,
-            t,
+            &self.enc_parameters.generator, pk, proof, t,
         )
+    }
+
+    pub fn prove_player<R: Rng+CryptoRng>(
+        &self,
+        system_rng: &mut R,
+        key: &PlayerKeypair<C>,
+        player_public_info: impl IntoTranscript,
+    ) -> PlayerHello<C> {
+        let ownership_proof = self.prove_key_ownership(system_rng,&key,player_public_info);
+        PlayerHello { pk: key.pk, ownership_proof }
     }
 
     pub fn generate_player<R: Rng+CryptoRng>(
@@ -101,8 +108,7 @@ impl<C: CurveGroup> Parameters<C> {
         player_public_info: impl IntoTranscript,
     ) -> (PlayerHello<C>, PlayerKeypair<C>) {
         let key = self.player_keygen(system_rng);
-        let ownership_proof = self.prove_key_ownership(system_rng,&key,player_public_info);
-        (PlayerHello { pk: key.pk, ownership_proof },key)
+        (self.prove_player(system_rng,&key,player_public_info),key)
     }
 
     pub fn verify_player<'a>(

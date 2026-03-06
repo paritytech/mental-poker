@@ -123,6 +123,8 @@ impl<C: CurveGroup> Parameters<C> {
         );
 
         let shuffle_statement = shuffle::Statement::new(deck, &masked_shuffled, m, n);
+        // Verifies the lengths all make sense, probably okay to unwrap
+        // https://github.com/peer3to/mental-poker/blob/main/proofs/src/zkp/arguments/shuffle/mod.rs#L125
         shuffle_statement.is_valid()?;
 
         let witness = shuffle::Witness::new(permutation, masking_factors);
@@ -134,6 +136,14 @@ impl<C: CurveGroup> Parameters<C> {
             &witness,
             t,
         )?;
+        // There are seven error sites that could trigger here.  Of these, three are
+        // HomomorphicCommitmentScheme::commit which afaik merely requires enough SRS:
+        // https://github.com/peer3to/mental-poker/blob/main/proofs/src/vector_commitment/pedersen/mod.rs#L83
+        // The one reshape and two dot_product calls are length miss match errors:
+        // https://github.com/peer3to/mental-poker/blob/main/proofs/src/utils/vector_arithmetic.rs
+        // The remaining two origins are matrix_elements_product::Prover::prove and 
+        // product_argument::prover::Prover::prove, which both contain more dot_product
+        // and HomomorphicCommitmentScheme::commit calls, which all depend upon the length.
         // println!("Shuffle {:?}",start.elapsed());
 
         masked_shuffled.truncate(size);
