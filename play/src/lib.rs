@@ -1,19 +1,25 @@
 
 use getrandom_or_panic::getrandom_or_panic;
 
-// use wasm_bindgen::prelude::*;
-
-// pub mod serialize;
-// pub use serialize::{MyDeserialize, MySerialize};
+#[cfg(feature="wasm")]
+use wasm_bindgen::prelude::*;
 
 pub use cards_protocol::error::CardProtocolError;
 // pub use cards_proofs::error::CryptoError;
 
-mod keys;
-pub use keys::*;
+#[cfg(feature="wasm")]
+pub mod wasm;
+
+pub mod keys;
+pub use keys::AggregatedPublicKeys;
+
+#[cfg(feature="wasm")]
+pub mod keys_wasm;
+#[cfg(feature="wasm")]
+pub use keys_wasm::PlayerKeypairWasm;
 
 mod reveals;
-pub use reveals::*;
+pub use reveals::AccumulateReveals;
 
 #[cfg(test)]
 pub mod more;
@@ -59,9 +65,3 @@ pub type RevealsMerged = cards_protocol::reveal::RevealsMerged<Curve>;
 
 pub type ShuffleMessage = cards_protocol::shuffle::ShuffleMessage<Curve>;
 
-
-/*
-#[wasm_bindgen]
-pub fn main() -> anyhow::Result<(),JsValue> {
-}
-*/

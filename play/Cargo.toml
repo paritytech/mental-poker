@@ -46,6 +46,6 @@ default = ["std"]
 std = ["ark-std/std", "ark-serialize/std", "cards-deck/std", "wasm-bindgen?/std"]
 # "ark-ec/std", "ark-ff/std", 
 serde = ["dep:serde", "ark-serialize/serde"]
-wasm-bindgen = ["dep:wasm-bindgen"]
+wasm = ["dep:wasm-bindgen"]
 
 

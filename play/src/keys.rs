@@ -6,10 +6,22 @@ use ark_serialize::{CanonicalSerialize,CanonicalDeserialize,SerializationError,C
 #[cfg(feature="serde")]
 use serde::{Serialize, Deserialize};
 
-#[cfg(feature="wasm-bindgen")]
-use wasm_bindgen::prelude::*;
+// #[cfg(feature="wasm")]
+// use wasm_bindgen::prelude::*;
 
 
+pub fn player_keygen() -> PlayerKeypair {
+    PARAMS.player_keygen(&mut getrandom_or_panic())
+}
+
+pub fn prove_player(
+    key: &PlayerKeypair,
+    player_public_info: impl IntoTranscript,
+) -> PlayerHello {
+    PARAMS.prove_player(&mut getrandom_or_panic(),key,player_public_info)
+}
+
+// We cannot return a Vec<u8> plus another typeunder wasm-bindgen ?!?
 pub fn generate_player(
     player_public_info: impl IntoTranscript,
 ) -> (PlayerHello, PlayerKeypair) {
@@ -24,20 +36,23 @@ pub fn verify_player(
 }
 
 
-
 type ApkInner = cards_protocol::keys::AggregatedPublicKeys<'static, Curve>;
 
 #[derive(Clone,CanonicalSerialize,Debug)]
 #[cfg_attr(feature="serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature="serde", serde(from = "CompressedChecked<Self>", into = "CompressedChecked<Self>"))]
 #[repr(transparent)]
+#[cfg_attr(feature="wasm", wasm_bindgen)]
 pub struct AggregatedPublicKeys(
-    pub ApkInner
+    pub(crate) ApkInner
 );
 
 impl core::ops::Deref for AggregatedPublicKeys {
     type Target = ApkInner;
     fn deref(&self) -> &Self::Target { &self.0}
+}
+impl core::ops::DerefMut for AggregatedPublicKeys {
+    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0}    
 }
 
 impl From<CompressedChecked<AggregatedPublicKeys>> for AggregatedPublicKeys {
@@ -66,26 +81,27 @@ impl AggregatedPublicKeys {
     /// Shuffle cards and produce proof using system randomness
     ///
     /// Verified using `verify_shuffle`
-    #[cfg_attr(feature="wasm-bindgen", wasm_bindgen(serde))]
     pub fn shuffle_and_remask(
         &self, deck: &[MaskedCard],
     ) -> Result<ShuffleMessage, CardProtocolError> {
         self.0.shuffle_and_remask(&mut getrandom_or_panic(), deck)
     }
-    
-    pub fn verify_quit<'a,'b>(
+
+    pub fn verify_quit(
         &mut self,
-        reveals: &'a RevealsMerged,
-        masked_cards: impl IntoIterator<Item=&'b MaskedCard>,
-    ) -> Result<&'a [RevealToken], CardProtocolError> {  // Not CryptoError?
+        reveals: &RevealsMerged,
+        masked_cards: &mut [MaskedCard],
+    ) -> Result<(), CardProtocolError> {  // Not CryptoError?
         let idx = self.0.player_index(&reveals.pk)?;
-        verify_merged_reveals(reveals,masked_cards)
-        .map(|r| { let _ = self.0.remove(idx); r })
+        for (rt,mc) in verify_merged_reveals(reveals,masked_cards.iter())?.iter().zip(masked_cards.iter_mut()) {
+            cards_protocol::reveal::update_masked_card(mc,rt);
+        }
+        let _ = self.0.remove(idx);
+        Ok(())
     }
 }
 
-// Afaik prove_merged_reveals and verify_merged_reveals should
-// opnly be called by Table, not directly.
+// We would not typically call prove_merged_reveals and verify_merged_reveals directly.
 
 pub fn prove_merged_reveals<'a>(
     key: &PlayerKeypair,
@@ -100,5 +116,3 @@ pub fn verify_merged_reveals<'a,'b>(
 ) -> Result<&'a [RevealToken], CardProtocolError> {  // Not CryptoError?
     Ok(crate::PARAMS.verify_merged_reveals(reveals, masked_cards)?)
 }
-
-
