@@ -2,14 +2,17 @@
 pub use ark_std::io::{Read, Write};
 pub use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, SerializationError};
 
+// #[cfg(feature="wasm")]
+// mod wasm;
+
+
 pub trait EzDeserialize : CanonicalDeserialize {
     fn deserialize<R: Read>(r: R) -> Result<Self, SerializationError> {
         Self::deserialize_compressed(r)
     }
 }
 
-impl<T: CanonicalDeserialize> EzDeserialize for T {
-}
+impl<T: CanonicalDeserialize> EzDeserialize for T { }
 
 pub trait EzSerialize : CanonicalSerialize {
     fn serialized_len(&self) -> usize { self.compressed_size() }
@@ -24,6 +27,5 @@ pub trait EzSerialize : CanonicalSerialize {
     }
 }
 
-impl<T: CanonicalSerialize> EzSerialize for T {
-}
+impl<T: CanonicalSerialize> EzSerialize for T { }
 

@@ -14,3 +14,10 @@ license = "MIT OR Apache-2.0"
 ark-std.workspace = true
 ark-serialize.workspace = true
 
+# wasm-bindgen = { workspace = true, optional = true }
+
+[features]
+default = ["std"]
+std = ["ark-std/std", "ark-serialize/std"] # "wasm-bindgen?/std"
+# wasm = ["dep:wasm-bindgen"]
+
