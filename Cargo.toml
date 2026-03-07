@@ -51,6 +51,6 @@ serde = { version = "1", default-features = false, features = ["derive"] }
 # ark-serde-compat = { version = "0.1", default-features = false }
 wasm-bindgen = { version = "0.2.100", default-features = false }
 
-[patch.crates-io]
-ark-serialize = { git = "https://github.com/arkworks-rs/algebra?rev=serde", rev = "bf1c9b2" }
-
+# Only required for serde, which we do not use
+# [patch.crates-io]
+# ark-serialize = { git = "https://github.com/arkworks-rs/algebra?rev=serde", rev = "bf1c9b2" }

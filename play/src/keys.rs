@@ -1,8 +1,9 @@
 use cards_protocol::IntoTranscript;
 use crate::*;
 
-use ark_serialize::{CanonicalSerialize,CanonicalDeserialize,SerializationError,Compress,Validate,Valid,CompressedChecked};
-
+use ark_serialize::{CanonicalSerialize,CanonicalDeserialize,SerializationError,Compress,Validate,Valid};
+#[cfg(feature="serde")]
+use ark_serialize::{CompressedChecked};
 #[cfg(feature="serde")]
 use serde::{Serialize, Deserialize};
 
@@ -54,7 +55,7 @@ impl core::ops::Deref for AggregatedPublicKeys {
 impl core::ops::DerefMut for AggregatedPublicKeys {
     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0}    
 }
-
+#[cfg(feature="serde")]
 impl From<CompressedChecked<AggregatedPublicKeys>> for AggregatedPublicKeys {
     fn from(sig: CompressedChecked<AggregatedPublicKeys>) -> Self { sig.0 }
 }
