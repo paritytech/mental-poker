@@ -36,14 +36,12 @@ wasm-bindgen = { workspace = true, optional = true }
 # wasm-bindgen-test = "0.3.29"
 
 
-
 [lib]
 crate-type = ["rlib", "cdylib"]
 
-
 [features]
 default = ["std"]
-std = ["ark-std/std", "ark-serialize/std", "cards-deck/std", "wasm-bindgen?/std"]
+std = ["ark-std/std", "ark-serialize/std", "cards-deck/std", "cards-protocol/std", "cards-proofs/std", "wasm-bindgen?/std"]
 # "ark-ec/std", "ark-ff/std", 
 serde = ["dep:serde", "ark-serialize/serde"]
 wasm = ["dep:wasm-bindgen"]
