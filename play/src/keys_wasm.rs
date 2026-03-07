@@ -56,6 +56,7 @@ pub fn verify_player(
 
 #[wasm_bindgen]
 impl AggregatedPublicKeys {
+    #[wasm_bindgen(js_name="shuffle_and_remask")]
     pub fn wasm_shuffle_and_remask(
         &self, deck: &MaskedCards,
     ) -> Result<Vec<u8> /*ShuffleMessage*/, CardsErrorWasm> {
@@ -67,6 +68,7 @@ impl AggregatedPublicKeys {
         Ok(shuffle_message.serialize_to_vec()?)
     }
 
+    #[wasm_bindgen(js_name="verify_shuffle")]
     pub fn wasm_verify_shuffle(
         &self, original_deck: &MaskedCards, shuffle_message: &[u8], 
     ) -> Result<MaskedCards, CardsErrorWasm> {
