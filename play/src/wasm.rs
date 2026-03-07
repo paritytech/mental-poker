@@ -59,12 +59,14 @@ impl<'a> From<&'a str> for CardsErrorWasm {
     }
 }
 
+pub type ResultWasm<T> = Result<T,CardsErrorWasm>;
+
 
 /// Reimplements cards_protocol::reveal::card_position, but using wasm weaker types
 // TODO:  Use CardsErrorWarm not Option<..>?  Or can zero be ignored here?
 // TODO:  Card index position vs point bytes?  Use deck being sorted?
 #[cfg(feature="wasm")]
-pub fn card_position(crd: &super::UnmaskedCard) -> Result<usize,CardsErrorWasm> {
+pub fn card_position(crd: &super::UnmaskedCard) -> ResultWasm<usize> {
     use ark_std::Zero;
     if crd.is_zero() { return Ok(usize::MAX); }
     Ok(super::DECK.iter().position(|c| c==crd)

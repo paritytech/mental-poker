@@ -57,7 +57,7 @@ impl AccumulateReveals {
 #[cfg(feature="wasm")]
 #[wasm_bindgen]
 impl AccumulateReveals {
-    pub fn add_reveal_wasm(&mut self, reveal_message: &[u8]) -> Result<(), crate::wasm::CardsErrorWasm> {
+    pub fn add_reveal_wasm(&mut self, reveal_message: &[u8]) -> wasm::ResultWasm<()> {
         let reveal_message = cards_protocol::RevealMessage::deserialize_compressed(reveal_message) ?;
         Ok(self.add_reveal(&reveal_message)?)
     }

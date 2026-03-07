@@ -1,5 +1,5 @@
 
-use crate::{*, wasm::{MaskedCards,CardsErrorWasm}};
+use crate::{*, wasm::{MaskedCards,ResultWasm}};
 
 use ez_serialize::{EzSerialize,EzDeserialize};
 
@@ -47,7 +47,7 @@ pub fn player_public(
 pub fn verify_player(
     pk: &[u8], /* PlayerHello */
     player_public_info: &[u8],
-) -> Result<Vec<u8>, CardsErrorWasm> {
+) -> ResultWasm<Vec<u8>> {
     let pk = PlayerHello::deserialize(pk)?;
     keys::verify_player(&pk,player_public_info)?;
     Ok(pk.as_affine().serialize_to_vec()?)
@@ -59,7 +59,7 @@ impl AggregatedPublicKeys {
     #[wasm_bindgen(js_name="shuffle_and_remask")]
     pub fn wasm_shuffle_and_remask(
         &self, deck: &MaskedCards,
-    ) -> Result<Vec<u8> /*ShuffleMessage*/, CardsErrorWasm> {
+    ) -> ResultWasm<Vec<u8> /*ShuffleMessage*/> {
         let shuffle_message = self.shuffle_and_remask(deck.0.as_slice())?;
         // We'd ideally propogate the shuffle error above but wasm-bindgen
         // makes this hard.  Afaik it only occurs because of some incorrect
@@ -71,7 +71,7 @@ impl AggregatedPublicKeys {
     #[wasm_bindgen(js_name="verify_shuffle")]
     pub fn wasm_verify_shuffle(
         &self, original_deck: &MaskedCards, shuffle_message: &[u8], 
-    ) -> Result<MaskedCards, CardsErrorWasm> {
+    ) -> ResultWasm<MaskedCards> {
         let shuffle_message = ShuffleMessage::deserialize(shuffle_message) ?;
         let shuffled_deck = self.0.verify_shuffle(original_deck.0.as_slice(),&shuffle_message) ?;
         Ok(MaskedCards(shuffled_deck.to_owned()))
