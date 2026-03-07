@@ -28,6 +28,13 @@ pub fn zero_mask_deck() -> MaskedCards {
 #[repr(transparent)]
 pub struct CardsErrorWasm(#[wasm_bindgen(readonly)] pub(crate) String);
 
+#[wasm_bindgen]
+impl CardsErrorWasm {
+    pub fn as_js_error(&self) -> JsError {
+        JsError::new(&self.0)
+    }
+}
+
 impl From<CardProtocolError> for CardsErrorWasm {
     fn from(err: CardProtocolError) -> Self {
         CardsErrorWasm(err.to_string())
