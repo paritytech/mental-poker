@@ -24,42 +24,7 @@ pub fn zero_mask_deck() -> MaskedCards {
 }
 
 
-#[wasm_bindgen(js_name="CardsError")]
-#[repr(transparent)]
-pub struct CardsErrorWasm(#[wasm_bindgen(readonly)] pub(crate) String);
-
-#[wasm_bindgen]
-impl CardsErrorWasm {
-    pub fn as_js_error(&self) -> JsError {
-        JsError::new(&self.0)
-    }
-}
-
-impl From<CardProtocolError> for CardsErrorWasm {
-    fn from(err: CardProtocolError) -> Self {
-        CardsErrorWasm(err.to_string())
-    }
-}
-
-impl From<CryptoError> for CardsErrorWasm {
-    fn from(err: CryptoError) -> Self {
-        CardsErrorWasm(err.to_string())
-    }
-}
-
-impl From<SerializationError> for CardsErrorWasm {
-    fn from(err: SerializationError) -> Self {
-        CardsErrorWasm(err.to_string())
-    }
-}
-
-impl<'a> From<&'a str> for CardsErrorWasm {
-    fn from(err: &'a str) -> Self {
-        CardsErrorWasm(err.to_string())
-    }
-}
-
-pub type ResultWasm<T> = Result<T,CardsErrorWasm>;
+pub type ResultWasm<T> = Result<T,JsError>;
 
 
 /// Reimplements cards_protocol::reveal::card_position, but using wasm weaker types
