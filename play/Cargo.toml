@@ -21,6 +21,7 @@ ark-secp256k1.workspace = true
 # thiserror.workspace = true
 
 getrandom_or_panic.workspace = true
+getrandom = { version = "0.2", optional = true }
 
 cards-deck.workspace = true
 cards-proofs.workspace = true
@@ -44,6 +45,6 @@ default = ["std"]
 std = ["ark-std/std", "ark-serialize/std", "cards-deck/std", "cards-protocol/std", "cards-proofs/std", "wasm-bindgen?/std"]
 # "ark-ec/std", "ark-ff/std",
 serde = [] # ["dep:serde", "ark-serialize/serde"]
-wasm = ["dep:wasm-bindgen"]
+wasm = ["dep:wasm-bindgen", "getrandom_or_panic/getrandom", "getrandom/js"]
 
 
