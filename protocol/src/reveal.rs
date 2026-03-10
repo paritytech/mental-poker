@@ -1,14 +1,13 @@
 
 use crate::{
     Parameters, error::CardProtocolError,
-    CanonicalSerialize,CanonicalDeserialize,SerializationError,
     UnmaskedCard, MaskedCard,
     keys::*,    
 };
 
 use ark_ec::{AffineRepr,CurveGroup};
 use ark_std::{io::{Read,Write}, vec::Vec, rand::{Rng,CryptoRng}, Zero}; // io::{self,Write}
-use ark_serialize::{Compress,Validate,Valid};
+use ark_serialize::{CanonicalSerialize,CanonicalDeserialize,SerializationError,Compress,Validate,Valid};
 
 #[cfg(feature="serde")]
 use ark_serialize::{CompressedChecked};
