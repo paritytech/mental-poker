@@ -56,6 +56,16 @@ pub fn verify_player(
 
 #[wasm_bindgen]
 impl AggregatedPublicKeys {
+    #[wasm_bindgen(js_name="deserialize")]
+    pub fn wasm_deserialize(selfy: &[u8]) -> wasm::ResultWasm<AggregatedPublicKeys> {
+        Ok(AggregatedPublicKeys::deserialize(selfy) ?)
+    }
+
+    #[wasm_bindgen(js_name="serialize")]
+    pub fn wasm_serialize(&self) -> Vec<u8> {
+        self.serialize_to_vec().unwrap()
+    }
+
     #[wasm_bindgen(js_name="shuffle_and_remask")]
     pub fn wasm_shuffle_and_remask(
         &self, deck: &MaskedCards,

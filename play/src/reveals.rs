@@ -62,5 +62,16 @@ impl AccumulateReveals {
         Ok(self.add_reveal(&reveal_message)?)
     }
 
+    #[wasm_bindgen(js_name="deserialize")]
+    pub fn wasm_deserialize(selfy: &[u8]) -> wasm::ResultWasm<AccumulateReveals> {
+        Ok(AccumulateReveals::deserialize_compressed(selfy) ?)
+    }
+
+    #[wasm_bindgen(js_name="serialize")]
+    pub fn wasm_serialize(&self) -> Vec<u8> {
+        use ez_serialize::EzSerialize;
+        self.serialize_to_vec().unwrap()
+    }
+
     // pub fn completed or similar?    
 }
