@@ -15,6 +15,10 @@ pub fn player_keygen() -> PlayerKeypair {
     PARAMS.player_keygen(&mut getrandom_or_panic())
 }
 
+pub fn player_deserialize(selfy: &[u8]) -> Result<PlayerKeypair,SerializationError> {
+    PARAMS.deserialize_player(selfy)
+}
+
 pub fn prove_player(
     key: &PlayerKeypair,
     player_public_info: impl IntoTranscript,

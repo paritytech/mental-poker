@@ -1,12 +1,11 @@
 
 use crate::{
     Parameters,error::CardProtocolError, IntoTranscript,
-    CanonicalSerialize,CanonicalDeserialize,SerializationError
 };
 
 use ark_ec::{AffineRepr,CurveGroup};
 use ark_std::{io::{Read,Write}, borrow::{BorrowMut}, vec::Vec, rand::{Rng,CryptoRng}};
-use ark_serialize::{Compress,Validate,Valid};
+use ark_serialize::{CanonicalSerialize,CanonicalDeserialize,SerializationError,Compress,Validate,Valid};
 
 use cards_proofs::{
     error::CryptoError,
@@ -34,17 +33,29 @@ pub type PlayerSecretKey<C> = el_gamal::SecretKey<C>;
 ///
 /// We include the player's public key as a performance optimization
 /// (or an interface simplification).
-#[derive(Clone, CanonicalDeserialize, CanonicalSerialize)]
-#[cfg_attr(feature="serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature="serde", serde(from = "CompressedChecked<Self>", into = "CompressedChecked<Self>"))]
+#[derive(Clone)]
+// #[cfg_attr(feature="serde", derive(Serialize, Deserialize))]
+// #[cfg_attr(feature="serde", serde(from = "CompressedChecked<Self>", into = "CompressedChecked<Self>"))]
 pub struct PlayerKeypair<C: CurveGroup> {
     pub sk: PlayerSecretKey<C>,
     pub pk: PlayerPublicKey<C>,
 }
-#[cfg(feature="serde")]
-impl<C: CurveGroup> From<CompressedChecked<PlayerKeypair<C>>> for PlayerKeypair<C> {
-    fn from(sig: CompressedChecked<PlayerKeypair<C>>) -> Self { sig.0 }
+// #[cfg(feature="serde")]
+// impl<C: CurveGroup> From<CompressedChecked<PlayerKeypair<C>>> for PlayerKeypair<C> {
+//     fn from(sig: CompressedChecked<PlayerKeypair<C>>) -> Self { sig.0 }
+// }
+
+impl<C: CurveGroup> CanonicalSerialize for PlayerKeypair<C> {
+    fn serialize_with_mode<W: Write>(
+        &self, writer: W, _: Compress,
+    ) -> Result<(), SerializationError> {
+        self.sk.serialize_compressed(writer)
+    }
+    fn serialized_size(&self, _: Compress) -> usize {
+        self.sk.compressed_size()
+    }
 }
+
 
 pub type ZKProofKeyOwnership<C> = schnorr_identification::proof::Proof<C>;
 
@@ -58,6 +69,17 @@ impl<C: CurveGroup> Parameters<C> {
     ) -> PlayerKeypair<C> {
         let (pk, sk) = el_gamal::ElGamal::keygen(&self.enc_parameters, system_rng);
         PlayerKeypair { pk, sk }
+    }
+
+    pub fn player_from_secret(&self, sk: PlayerSecretKey<C>) -> PlayerKeypair<C> {
+        use core::ops::Mul;
+        let pk = self.enc_parameters.generator.mul(sk).into();
+        PlayerKeypair { sk, pk }
+    }
+
+    pub fn deserialize_player<R: Read>(&self, reader: R) -> Result<PlayerKeypair<C>, SerializationError> {
+        let sk = PlayerSecretKey::<C>::deserialize_compressed(reader) ?;
+        Ok(self.player_from_secret(sk))
     }
 
     pub fn prove_key_ownership<R: Rng+CryptoRng>(

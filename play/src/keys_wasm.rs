@@ -31,6 +31,17 @@ impl PlayerKeypairWasm{
     ) -> Vec<u8> /* PlayerHello */ {
         keys::prove_player(self,player_public_info).serialize_to_vec().unwrap()
     }
+
+    #[wasm_bindgen(js_name="deserialize")]
+    pub fn wasm_deserialize(selfy: &[u8]) -> wasm::ResultWasm<PlayerKeypairWasm> {
+        Ok(PlayerKeypairWasm(keys::player_deserialize(selfy) ?))
+    }
+
+    /// Warning: Never send this off the machine
+    #[wasm_bindgen(js_name="serialize")]
+    pub fn wasm_serialize(&self) -> Vec<u8> {
+        self.0.serialize_to_vec().unwrap()
+    }
 }
 
 /// Assumes correct format and returns empty string if not.
