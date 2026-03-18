@@ -73,5 +73,13 @@ impl AccumulateReveals {
         self.serialize_to_vec().unwrap()
     }
 
-    // pub fn completed or similar?    
+    pub fn is_completed_wasm(&self) -> bool {
+        self.0.is_completed()
+    }
+
+    /// Unmask the card (once all reveals are accumulated) and return its deck position.
+    pub fn completed_position(&self) -> wasm::ResultWasm<usize> {
+        let unmasked = self.0.completed().ok_or("Card not yet fully revealed")?;
+        wasm::card_position(&unmasked)
+    }
 }

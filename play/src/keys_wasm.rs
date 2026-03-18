@@ -19,7 +19,7 @@ impl core::ops::DerefMut for PlayerKeypairWasm {
 
 // We cannot return a Vec<u8> plus another typeunder wasm-bindgen so no generate_player
 
-#[wasm_bindgen]
+#[wasm_bindgen(js_class = "PlayerKeypair")]
 impl PlayerKeypairWasm{
     #[wasm_bindgen(constructor)]
     pub fn player_keygen() -> PlayerKeypairWasm {
@@ -41,6 +41,17 @@ impl PlayerKeypairWasm{
     #[wasm_bindgen(js_name="serialize")]
     pub fn wasm_serialize(&self) -> Vec<u8> {
         self.0.serialize_to_vec().unwrap()
+    }
+
+    /// Produce a `RevealMessage` (reveal token + ZK proof) for a single masked card.
+    pub fn prove_reveal(
+        &self, masked_card_bytes: &[u8],
+    ) -> ResultWasm<Vec<u8>> {
+        let masked_card = crate::MaskedCard::deserialize(masked_card_bytes)?;
+        let reveal_msg = crate::PARAMS.prove_single_reveal_token(
+            &mut getrandom_or_panic(), &self.0, &masked_card,
+        );
+        Ok(reveal_msg.serialize_to_vec()?)
     }
 }
 
@@ -91,10 +102,20 @@ impl AggregatedPublicKeys {
 
     #[wasm_bindgen(js_name="verify_shuffle")]
     pub fn wasm_verify_shuffle(
-        &self, original_deck: &MaskedCards, shuffle_message: &[u8], 
+        &self, original_deck: &MaskedCards, shuffle_message: &[u8],
     ) -> ResultWasm<MaskedCards> {
         let shuffle_message = ShuffleMessage::deserialize(shuffle_message) ?;
         let shuffled_deck = self.0.verify_shuffle(original_deck.0.as_slice(),&shuffle_message) ?;
         Ok(MaskedCards(shuffled_deck.to_owned()))
+    }
+
+    /// Create an `AccumulateReveals` for a single masked card.
+    /// Feed `RevealMessage`s into it via `add_reveal_wasm`, then call `completed_position`.
+    #[wasm_bindgen(js_name="accumulate_reveals")]
+    pub fn wasm_accumulate_reveals(
+        &self, masked_card_bytes: &[u8],
+    ) -> ResultWasm<crate::AccumulateReveals> {
+        let masked_card = crate::MaskedCard::deserialize(masked_card_bytes)?;
+        Ok(crate::AccumulateReveals(self.0.accumulate_reveals(masked_card)))
     }
 }
