@@ -250,6 +250,11 @@ impl<'p, C: CurveGroup> AggregatedPublicKeys<'p, C> {
         self.players_public_keys.as_slice()
     }
 
+    /// Cannonicalize the player indices
+    pub fn sort(&mut self) {
+        self.players_public_keys.sort_by_key(xy_key::<C>);
+    }
+
     pub fn player_index(&self, pk: &PlayerPublicKey<C>) -> Result<usize,CardProtocolError> {
         self.players().iter().position(|p| p==pk).ok_or(CardProtocolError::PlayerNotPresent)
     }
