@@ -23,6 +23,41 @@ pub fn zero_mask_deck() -> MaskedCards {
     MaskedCards(crate::zero_mask_deck())
 }
 
+#[wasm_bindgen]
+pub fn zero_mask_deck_n(count: usize) -> MaskedCards {
+    let mut deck = crate::zero_mask_deck();
+    deck.truncate(count);
+    MaskedCards(deck)
+}
+
+#[wasm_bindgen]
+impl MaskedCards {
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn get_card(&self, index: usize) -> Vec<u8> {
+        use ark_serialize::CanonicalSerialize;
+        let mut buf = Vec::new();
+        self.0[index].serialize_compressed(&mut buf).unwrap();
+        buf
+    }
+
+    #[wasm_bindgen(js_name="deserialize")]
+    pub fn wasm_deserialize(bytes: &[u8]) -> ResultWasm<MaskedCards> {
+        use ark_serialize::CanonicalDeserialize;
+        Ok(MaskedCards(Vec::<crate::MaskedCard>::deserialize_compressed(bytes)?))
+    }
+
+    #[wasm_bindgen(js_name="serialize")]
+    pub fn wasm_serialize(&self) -> Vec<u8> {
+        use ark_serialize::CanonicalSerialize;
+        let mut buf = Vec::new();
+        self.0.serialize_compressed(&mut buf).unwrap();
+        buf
+    }
+}
+
 
 #[wasm_bindgen(js_name="CardsError")]
 #[repr(transparent)]
