@@ -26,6 +26,7 @@ impl PlayerKeypairWasm{
         PlayerKeypairWasm(keys::player_keygen())
     }
 
+    /// Include any delegating public key in `player_public_info` for back certification
     pub fn prove_player(
         &self, player_public_info: &[u8],
     ) -> Vec<u8> /* PlayerHello */ {

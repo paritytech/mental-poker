@@ -19,6 +19,7 @@ pub fn player_deserialize(selfy: &[u8]) -> Result<PlayerKeypair,SerializationErr
     PARAMS.deserialize_player(selfy)
 }
 
+/// Include any delegating public key in `player_public_info` for back certification
 pub fn prove_player(
     key: &PlayerKeypair,
     player_public_info: impl IntoTranscript,
@@ -26,6 +27,7 @@ pub fn prove_player(
     PARAMS.prove_player(&mut getrandom_or_panic(),key,player_public_info)
 }
 
+/// Include any delegating public key in `player_public_info` for back certification
 // We cannot return a Vec<u8> plus another typeunder wasm-bindgen ?!?
 pub fn generate_player(
     player_public_info: impl IntoTranscript,

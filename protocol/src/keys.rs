@@ -114,6 +114,7 @@ impl<C: CurveGroup> Parameters<C> {
         )
     }
 
+    /// Include any delegating public key in `player_public_info` for back certification
     pub fn prove_player<R: Rng+CryptoRng>(
         &self,
         system_rng: &mut R,
@@ -124,6 +125,7 @@ impl<C: CurveGroup> Parameters<C> {
         PlayerHello { pk: key.pk, ownership_proof }
     }
 
+    /// Include any delegating public key in `player_public_info` for back certification
     pub fn generate_player<R: Rng+CryptoRng>(
         &self,
         system_rng: &mut R,
