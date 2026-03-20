@@ -262,6 +262,7 @@ fn main() -> anyhow::Result<()> {
     // 1.a Andrija shuffles first
     let a_shuffled = apk.shuffle_and_remask(
         rng,
+        &andrija.sk,
         &deck,
     )?;
 
@@ -274,41 +275,44 @@ fn main() -> anyhow::Result<()> {
     //2.a Kobi shuffles second
     let k_shuffled = apk.shuffle_and_remask(
         rng,
-        &a_shuffled.deck,
+        &kobi.sk,
+        &a_shuffled.deck(),
     )?;
 
     //2.b Everyone checks
     apk.verify_shuffle(
-        &a_shuffled.deck,
+        &a_shuffled.deck(),
         &k_shuffled,
     )?;
 
     //3.a Nico shuffles third
     let n_shuffled = apk.shuffle_and_remask(
         rng,
-        &k_shuffled.deck,
+        &nico.sk,
+        &k_shuffled.deck(),
     )?;
 
     //3.b Everyone checks
     apk.verify_shuffle(
-        &k_shuffled.deck,
+        &k_shuffled.deck(),
         &n_shuffled,
     )?;
 
     //4.a Tom shuffles last
     let final_shuffled = apk.shuffle_and_remask(
         rng,
-        &n_shuffled.deck,
+        &tom.sk,
+        &n_shuffled.deck(),
     )?;
 
     //4.b Everyone checks before accepting last deck for game
     apk.verify_shuffle(
-        &n_shuffled.deck,
+        &n_shuffled.deck(),
         &final_shuffled,
     )?;
 
     // CARDS ARE SHUFFLED. ROUND OF THE GAME CAN BEGIN
-    let deck = final_shuffled.deck;
+    let deck = final_shuffled.deck();
 
     andrija.receive_card(deck[0]);
     kobi.receive_card(deck[1]);

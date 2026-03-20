@@ -80,9 +80,9 @@ impl AggregatedPublicKeys {
 
     #[wasm_bindgen(js_name="shuffle_and_remask")]
     pub fn wasm_shuffle_and_remask(
-        &self, deck: &MaskedCards,
+        &self, sk: &PlayerKeypairWasm, deck: &MaskedCards,
     ) -> ResultWasm<Vec<u8> /*ShuffleMessage*/> {
-        let shuffle_message = self.shuffle_and_remask(deck.0.as_slice())?;
+        let shuffle_message = self.shuffle_and_remask(&sk.0, deck.0.as_slice())?;
         // We'd ideally propogate the shuffle error above but wasm-bindgen
         // makes this hard.  Afaik it only occurs because of some incorrect
         // lengths in the parameters and SRS, or some internal error that
@@ -92,10 +92,13 @@ impl AggregatedPublicKeys {
 
     #[wasm_bindgen(js_name="verify_shuffle")]
     pub fn wasm_verify_shuffle(
-        &self, original_deck: &MaskedCards, shuffle_message: &[u8], 
+        &self, idx: usize, original_deck: &MaskedCards, shuffle_message: &[u8], 
     ) -> ResultWasm<MaskedCards> {
         let shuffle_message = ShuffleMessage::deserialize(shuffle_message) ?;
-        let shuffled_deck = self.0.verify_shuffle(original_deck.0.as_slice(),&shuffle_message) ?;
+        let (pk,shuffled_deck) = self.0.verify_shuffle(original_deck.0.as_slice(),&shuffle_message) ?;
+        if self.0.players().get(idx) != Some(pk) {
+            return Err("Incorrect player signed valid shuffle".into());
+        }
         Ok(MaskedCards(shuffled_deck.to_owned()))
     }
 }

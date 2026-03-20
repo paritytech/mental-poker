@@ -1,5 +1,5 @@
 use super::{
-    IntoTranscript,
+    IntoTranscript,Transcript,
     CanonicalSerialize,CanonicalDeserialize,
     Parameters, setup::mid_factor,
     error::CardProtocolError,
@@ -33,31 +33,32 @@ use cards_proofs::{
 
 pub type ZKProofShuffle<C> = shuffle::proof::Proof<Scalar<C>, el_gamal::ElGamal<C>, PedersenCommitment<C>>;
 
-/// Output and proof for a remask and shuffle operation.
+/// Output and proof for a raw remask and shuffle operation,
+/// but without any signature.
 /// 
 /// Anyone could perform a remask and shuffle operation.  We treat only
 /// the permutation being applied, the masking factors, and the randomness
 /// used in the proof as secret here. 
 ///
 /// We do not require any secret keys in particular, so `ShuffleMessage`s
-/// can/do not sign themselves.  All players must apply the same remask
-/// and shuffles though, so you'll want some signed wrapper for consensus
-/// and spam prevention.
+/// can/do not sign themselves.  All players must apply the remasks and
+/// shuffles using hte same public key though, so you'll want some signed
+/// wrapper for consensus and spam prevention.
 #[derive(Clone,CanonicalSerialize,CanonicalDeserialize)]
 #[cfg_attr(feature="serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature="serde", serde(from = "CompressedChecked<Self>", into = "CompressedChecked<Self>"))]
-pub struct ShuffleMessage<C: CurveGroup> {
+pub struct ShuffleUnsigned<C: CurveGroup> {
     pub deck: Vec<MaskedCard<C>>,     // Should come first for bytes interfaces
     pub proof: ZKProofShuffle<C>,
 }
 
-impl<C: CurveGroup> Deref for ShuffleMessage<C> {
+impl<C: CurveGroup> Deref for ShuffleUnsigned<C> {
     type Target = [MaskedCard<C>];
     fn deref(&self) -> &[MaskedCard<C>] { &self.deck }
 }
 #[cfg(feature="serde")]
-impl<C: CurveGroup> From<CompressedChecked<ShuffleMessage<C>>> for ShuffleMessage<C> {
-    fn from(sig: CompressedChecked<ShuffleMessage<C>>) -> Self { sig.0 }
+impl<C: CurveGroup> From<CompressedChecked<ShuffleUnsigned<C>>> for ShuffleUnsigned<C> {
+    fn from(s: CompressedChecked<ShuffleUnsigned<C>>) -> Self { s.0 }
 }
 
 fn pad_masked_cards<C: CurveGroup>(cards: &mut Vec<MaskedCard<C>>, padding: usize) {
@@ -81,7 +82,7 @@ impl<C: CurveGroup> Parameters<C> {
         permutation: &Permutation,
         (m,n,padding): (usize,usize,usize),
         t: impl IntoTranscript,
-    ) -> Result<ShuffleMessage<C>, CryptoError> {
+    ) -> Result<ShuffleUnsigned<C>, CryptoError> {
         let size = permutation.len();
 
         // let start = ark_std::time::Instant::now();
@@ -147,7 +148,7 @@ impl<C: CurveGroup> Parameters<C> {
         // println!("Shuffle {:?}",start.elapsed());
 
         masked_shuffled.truncate(size);
-        Ok(ShuffleMessage { deck: masked_shuffled, proof })
+        Ok(ShuffleUnsigned { deck: masked_shuffled, proof })
     }
 
     /// Verify the mask-shuffle operation by `shuffle_and_remask`.
@@ -158,7 +159,7 @@ impl<C: CurveGroup> Parameters<C> {
         &self,
         shared_key: &AggregatePublicKey<C>,
         original_deck: &[MaskedCard<C>],
-        shuffled: &'a ShuffleMessage<C>,
+        shuffled: &'a ShuffleUnsigned<C>,
         (m,n,padding): (usize,usize,usize),
         t: impl IntoTranscript,
     ) -> Result<&'a [MaskedCard<C>], CryptoError> {
@@ -193,32 +194,72 @@ impl<C: CurveGroup> Parameters<C> {
 
 }
 
+
+/// Signed output and proof for a remask and shuffle operation,
+/// 
+/// We do not require the signing key have any relationship to the
+/// `AggregatedPublicKeys`, but you would usually enforce that
+/// each of the public keys in the `AggregatedPublicKeys` shuffles.
+#[derive(Clone,CanonicalSerialize,CanonicalDeserialize)]
+#[cfg_attr(feature="serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature="serde", serde(from = "CompressedChecked<Self>", into = "CompressedChecked<Self>"))]
+pub struct ShuffleMessage<C: CurveGroup> {
+    pub shuffle: ShuffleUnsigned<C>,     // Should come first for bytes interfaces
+    pub pk: PlayerPublicKey<C>,
+    pub sig: ZKProofKeyOwnership<C>,
+}
+
+impl<C: CurveGroup> Deref for ShuffleMessage<C> {
+    type Target = [MaskedCard<C>];
+    fn deref(&self) -> &[MaskedCard<C>] { self.deck() }
+}
+#[cfg(feature="serde")]
+impl<C: CurveGroup> From<CompressedChecked<ShuffleMessage<C>>> for ShuffleMessage<C> {
+    fn from(s: CompressedChecked<ShuffleMessage<C>>) -> Self { s.0 }
+}
+
+impl<C: CurveGroup> ShuffleMessage<C> {
+    pub fn deck(&self) -> &[MaskedCard<C>] { &self.shuffle.deck }
+}
+
+
 const SHUFFLE_RNG_SEED: &'static [u8] = b"Shuffle Proof";
 
 impl<'p,C: CurveGroup> AggregatedPublicKeys<'p,C> {
     pub fn shuffle_and_remask<R: Rng+CryptoRng>( // shuffle_and_remask
         &self,
         rng: &mut R,
+        sk: &PlayerKeypair<C>,
         deck: &[MaskedCard<C>],
     ) -> Result<ShuffleMessage<C>, CardProtocolError> {
         let size = deck.len();
         let masking_factors: Vec<Scalar<C>> = (0..size).map(|_| UniformRand::rand(rng)).collect();
         let permutation = Permutation::from_rng(rng,size);
         let size = mid_factor(size);
-        Ok(self.parameters().raw_shuffle_and_remask(
-            rng, self.aggregate_key(), deck, &masking_factors, &permutation, size, SHUFFLE_RNG_SEED
-        )?)
+        let mut t = Transcript::new_labeled(SHUFFLE_RNG_SEED);
+        let shuffle = self.parameters().raw_shuffle_and_remask(
+            rng, self.aggregate_key(), deck, &masking_factors, &permutation, size, &mut t,
+        )?;
+        let sig = self.parameters().prove_key_ownership(rng, sk, &mut t);
+        Ok(ShuffleMessage { shuffle, pk: sk.pk.clone(), sig })
     }
 
     /// Verify the mask-shuffle operation by `shuffle_and_remask`.
+    ///
+    /// We return the public key with which the caller should determine
+    /// if all or enough parties suffled yet.
     pub fn verify_shuffle<'a>(
         &self,
         original_deck: &[MaskedCard<C>],
-        shuffled_deck: &'a ShuffleMessage<C>,
-    ) -> Result<&'a [MaskedCard<C>], CardProtocolError> {
+        shuffled: &'a ShuffleMessage<C>,
+    ) -> Result<(&'a PlayerPublicKey<C>,&'a [MaskedCard<C>]), CardProtocolError> {
+        let ShuffleMessage { shuffle, pk, sig } = shuffled;
         let size = mid_factor(original_deck.len());
-        Ok(self.parameters().raw_verify_shuffle(
-            self.aggregate_key(), original_deck, shuffled_deck, size, SHUFFLE_RNG_SEED
-        )?)
+        let mut t = Transcript::new_labeled(SHUFFLE_RNG_SEED);
+        let new_deck = self.parameters().raw_verify_shuffle(
+            self.aggregate_key(), original_deck, shuffle, size, &mut t
+        )?;
+        self.parameters().verify_key_ownership(pk, &mut t, sig)?;
+        Ok((pk,new_deck))
     }
 }

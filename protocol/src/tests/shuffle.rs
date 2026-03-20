@@ -11,24 +11,26 @@ fn test_shuffle() {
 
     let parameters = CardParameters::setup(rng, deck_size);
 
-    let (_, apk) = setup_players(rng, &parameters, num_of_players);
+    let (players, apk) = setup_players(rng, &parameters, num_of_players);
 
     let deck: Vec<MaskedCard> = sample_vector(rng, deck_size);
 
     let shuffled = apk.shuffle_and_remask(
         rng,
+        &players[0],
         &deck,
     ).unwrap();
 
-    assert!(
+    assert_eq!(
         apk.verify_shuffle(
             &deck,
             &shuffled
-        ).is_ok()
+        ).expect("Shuffle failed").0,
+        &players[0].pk
     );
 
     let mut wrong = shuffled.clone();
-    wrong.deck = sample_vector(rng, deck_size);
+    wrong.shuffle.deck = sample_vector(rng, deck_size);
 
     assert_eq!(
         apk.verify_shuffle(
