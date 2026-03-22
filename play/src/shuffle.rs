@@ -92,6 +92,8 @@ impl AccumulateShuffles {
 #[cfg_attr(feature="wasm", wasm_bindgen)]
 impl AccumulateShuffles {
     pub fn is_completed(&self) -> bool { self.0.is_completed() }
+    /// Always returns zero if more than 32 players
+    pub fn remaining_mask(&self) -> u32 { self.0.remaining_mask() }
 }
 
 #[cfg(feature="wasm")]

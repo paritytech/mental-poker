@@ -265,8 +265,10 @@ impl<'p,C: CurveGroup> AggregatedPublicKeys<'p,C> {
     }
 
     pub fn accumulate_shuffles(self, deck: Vec<MaskedCard<C>>) -> AccumulateShuffles<'p,C> {
+        let l = self.players().len();
+        let remaining_mask = if l <= 32 { (1u64 << l)-1 } else { 0 } as u32;
         let remaining_key = self.aggregate_key().into_group();
-        AccumulateShuffles { apk: self, remaining_key, deck, }
+        AccumulateShuffles { apk: self, remaining_mask, remaining_key, deck, }
     }
 }
 
@@ -276,6 +278,7 @@ impl<'p,C: CurveGroup> AggregatedPublicKeys<'p,C> {
 #[cfg_attr(feature="serde", serde(from = "CompressedChecked<Self>", into = "CompressedChecked<Self>"))]
 pub struct AccumulateShuffles<'p,C: CurveGroup> {
     apk: AggregatedPublicKeys<'p,C>,
+    remaining_mask: u32,
     remaining_key: C,
     deck: Vec<MaskedCard<C>>,
 }
@@ -322,10 +325,14 @@ impl<'p,C: CurveGroup> AccumulateShuffles<'p,C> {
         self.deck.extend_from_slice(deck);
         let i = self.apk.player_index(&shuffle.pk).ok();
         if i.is_some()  {
+            self.remaining_mask &= !(1u32 << i.unwrap());
             self.remaining_key = self.remaining_key - pk;
         }
         Ok((pk,i))
     }
+
+    /// Always returns zero if more than 32 players
+    pub fn remaining_mask(&self) -> u32 { self.remaining_mask }
 
     pub fn is_completed(&self) -> bool { self.remaining_key.is_zero() }
 
@@ -347,6 +354,7 @@ impl<'p,C: CurveGroup> AccumulateShuffles<'p,C> {
     ) -> Result<AccumulateShuffles<'p,C>,SerializationError> {
         Ok(AccumulateShuffles {
             apk: AggregatedPublicKeys::deserialize_with_mode(&mut reader,compress,validate,parameters)?,
+            remaining_mask: CanonicalDeserialize::deserialize_with_mode(&mut reader,compress,validate)?,
             remaining_key: CanonicalDeserialize::deserialize_with_mode(&mut reader,compress,validate)?,
             deck: CanonicalDeserialize::deserialize_with_mode(&mut reader,compress,validate)?,
         })
