@@ -3,7 +3,7 @@ use ark_std::{io};
 use cards_proofs::error::*;
 use thiserror::Error;
 
-pub type ProtoResult<T> = ark_std::result::Result<T,CardProtocolError>;
+pub type CardResult<T> = ark_std::result::Result<T,CardProtocolError>;
 
 /// This is an error that could occur when running a cryptographic primitive
 #[derive(Error, Debug, PartialEq)]

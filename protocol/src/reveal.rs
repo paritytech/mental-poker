@@ -1,6 +1,6 @@
 
 use crate::{
-    Parameters, error::CardProtocolError,
+    Parameters, error::{CardResult,CardProtocolError},
     UnmaskedCard, MaskedCard,
     keys::*,    
 };
@@ -49,7 +49,7 @@ pub fn update_masked_card<C: CurveGroup>(mc: &mut MaskedCard<C>, token: &RevealT
 }
 
 /// Find the card in a deck.
-pub fn card_position<C: CurveGroup>(deck: &[UnmaskedCard<C>], card: &UnmaskedCard<C>) -> Result<usize,CardProtocolError> {
+pub fn card_position<C: CurveGroup>(deck: &[UnmaskedCard<C>], card: &UnmaskedCard<C>) -> CardResult<usize> {
     if card.0.is_zero() {
         return Err(CardProtocolError::ZeroCard)
     }
@@ -65,7 +65,7 @@ pub fn reveal_position<C: CurveGroup>(
     deck: &[UnmaskedCard<C>],
     masked_card: &MaskedCard<C>,
     revel_token: &RevealToken<C>,
-) -> Result<usize,CardProtocolError> {
+) -> CardResult<usize> {
     let rc = reveal_unchecked(revel_token,masked_card);
     card_position(deck,&rc)
 }
@@ -193,7 +193,7 @@ impl<C: CurveGroup> crate::Parameters<C> {
         &self,
         decryption_messages: &[RevealMessage<C>],
         masked_card: &MaskedCard<C>,
-    ) -> Result<UnmaskedCard<C>, CardProtocolError> {
+    ) -> CardResult<UnmaskedCard<C>> {
         let mut aggregate_token = RevealToken::<C>::zero();
         for reveal_message in decryption_messages {
             if masked_card != &reveal_message.masked_card {
@@ -233,7 +233,7 @@ impl<'p,C: CurveGroup>  AccumulateReveals<'p,C> {
     pub fn masked_card(&self) -> &MaskedCard<C> { &self.masked_card }
     pub fn token(&self) -> &RevealToken<C> { &self.token }
 
-    pub fn add_reveal(&mut self, reveal_message: &RevealMessage<C>) -> Result<(), CardProtocolError> {
+    pub fn add_reveal(&mut self, reveal_message: &RevealMessage<C>) -> CardResult<()> {
         if self.masked_card != reveal_message.masked_card {
             return Err(CardProtocolError::WrongCard);
         }

@@ -23,7 +23,7 @@ impl AggregatedPublicKeys {
     /// Verified using `verify_shuffle`
     pub fn shuffle_and_remask(
         &self, sk: &PlayerKeypair, deck: &[MaskedCard],
-    ) -> Result<ShuffleMessage, CardProtocolError> {
+    ) -> CardResult<ShuffleMessage> {
         self.0.shuffle_and_remask(&mut getrandom_or_panic(), sk, deck)
     }
 
@@ -78,12 +78,12 @@ impl Valid for AccumulateShuffles {
 impl AccumulateShuffles {
     pub fn do_shuffle(
         &mut self, sk: &PlayerKeypair,
-    ) -> Result<ShuffleMessage, CardProtocolError> {
+    ) -> CardResult<ShuffleMessage> {
         self.0.do_shuffle(&mut getrandom_or_panic(), sk)
     }
 
     pub fn apply_shuffle<'a>(&mut self, shuffle: &'a ShuffleMessage)
-     -> Result<(&'a PlayerPublicKey,Option<usize>), CardProtocolError>
+     -> CardResult<(&'a PlayerPublicKey,Option<usize>)>
     {
         Ok(self.0.apply_shuffle(shuffle)?)
     }

@@ -1,6 +1,6 @@
 
 use crate::{
-    Parameters,error::CardProtocolError, IntoTranscript,
+    Parameters,error, IntoTranscript,
 };
 
 use ark_ec::{AffineRepr,CurveGroup};
@@ -237,7 +237,7 @@ impl<'p, C: CurveGroup> AggregatedPublicKeys<'p, C> {
         &mut self,
         player: PlayerHello<C>,
         player_public_info: impl IntoTranscript,
-    ) -> Result<(),CardProtocolError> { // TODO: Why not keep CryptoError?
+    ) -> error::CardResult<()> { // TODO: Why not keep CryptoError?
         self.parameters.verify_key_ownership(&player.pk,player_public_info,&player.ownership_proof) ?;
         self.add_unchecked(player.pk);
         Ok(())
@@ -257,13 +257,13 @@ impl<'p, C: CurveGroup> AggregatedPublicKeys<'p, C> {
         self.players_public_keys.sort_by_key(xy_key::<C>);
     }
 
-    pub fn player_index(&self, pk: &PlayerPublicKey<C>) -> Result<usize,CardProtocolError> {
-        self.players().iter().position(|p| p==pk).ok_or(CardProtocolError::PlayerNotPresent)
+    pub fn player_index(&self, pk: &PlayerPublicKey<C>) -> error::CardResult<usize> {
+        self.players().iter().position(|p| p==pk).ok_or(error::CardProtocolError::PlayerNotPresent)
     }
 
     /// Return an error early, instead of doing something like
     /// `self.players().iter().enumerate().filter_map(|(i,k)| k==p)`
-    pub fn others_indices(&self, pk: &PlayerPublicKey<C>) -> Result<impl Iterator<Item=usize>,CardProtocolError> {
+    pub fn others_indices(&self, pk: &PlayerPublicKey<C>) -> error::CardResult<impl Iterator<Item=usize>> {
         let num_of_players = self.players().len();
         let index = self.player_index(pk)?;
         // Ok((0..index-1).chain(index..num_of_players))

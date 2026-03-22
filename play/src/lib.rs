@@ -4,7 +4,7 @@ use getrandom_or_panic::getrandom_or_panic;
 #[cfg(feature="wasm")]
 use wasm_bindgen::prelude::*;
 
-pub use cards_protocol::error::CardProtocolError;
+pub use cards_protocol::error::{CardResult,CardProtocolError};
 // pub use cards_proofs::error::CryptoError;
 
 #[cfg(feature="wasm")]

@@ -1,7 +1,7 @@
 use super::{
     IntoTranscript,Transcript,
     Parameters, setup::mid_factor,
-    error::CardProtocolError,
+    error::CardResult,
     Scalar, keys::*,
     MaskedCard, remasking::Remask, 
 };
@@ -232,7 +232,7 @@ impl<'p,C: CurveGroup> AggregatedPublicKeys<'p,C> {
         rng: &mut R,
         sk: &PlayerKeypair<C>,
         deck: &[MaskedCard<C>],
-    ) -> Result<ShuffleMessage<C>, CardProtocolError> {
+    ) -> CardResult<ShuffleMessage<C>> {
         let size = deck.len();
         let masking_factors: Vec<Scalar<C>> = (0..size).map(|_| UniformRand::rand(rng)).collect();
         let permutation = Permutation::from_rng(rng,size);
@@ -253,7 +253,7 @@ impl<'p,C: CurveGroup> AggregatedPublicKeys<'p,C> {
         &self,
         original_deck: &[MaskedCard<C>],
         shuffled: &'a ShuffleMessage<C>,
-    ) -> Result<(&'a PlayerPublicKey<C>,&'a [MaskedCard<C>]), CardProtocolError> {
+    ) -> CardResult<(&'a PlayerPublicKey<C>,&'a [MaskedCard<C>])> {
         let ShuffleMessage { shuffle, pk, sig } = shuffled;
         let size = mid_factor(original_deck.len());
         let mut t = Transcript::new_labeled(SHUFFLE_RNG_SEED);
@@ -307,7 +307,7 @@ impl<'p,C: CurveGroup> AccumulateShuffles<'p,C> {
         &mut self,
         rng: &mut R,
         sk: &PlayerKeypair<C>,
-    ) -> Result<ShuffleMessage<C>, CardProtocolError> {
+    ) -> CardResult<ShuffleMessage<C>> {
         self.apk.shuffle_and_remask(rng, sk, self.deck.as_slice())
     }
 
@@ -318,7 +318,7 @@ impl<'p,C: CurveGroup> AccumulateShuffles<'p,C> {
     /// before invoking this.
     pub fn apply_shuffle<'a>(
         &mut self, shuffle: &'a ShuffleMessage<C>
-    ) -> Result<(&'a PlayerPublicKey<C>,Option<usize>), CardProtocolError>
+    ) -> CardResult<(&'a PlayerPublicKey<C>,Option<usize>)>
     {
         let (pk,deck) = self.apk.verify_shuffle(&self.deck, shuffle)?;
         self.deck.clear();

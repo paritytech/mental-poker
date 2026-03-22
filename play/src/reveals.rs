@@ -47,7 +47,7 @@ impl Valid for AccumulateReveals {
 }
 
 impl AccumulateReveals {
-    pub fn add_reveal(&mut self, reveal_message: &RevealMessage) -> Result<(), CardProtocolError> {
+    pub fn add_reveal(&mut self, reveal_message: &RevealMessage) -> CardResult<()> {
         self.0.add_reveal(reveal_message)
     }
 }

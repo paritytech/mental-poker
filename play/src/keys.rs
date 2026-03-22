@@ -38,7 +38,7 @@ pub fn generate_player(
 pub fn verify_player(
     pk: &PlayerHello,
     player_public_info: impl IntoTranscript,
-) -> Result<&PlayerPublicKey, CardProtocolError> {
+) -> CardResult<&PlayerPublicKey> {
     Ok(PARAMS.verify_player(pk,player_public_info)?)
 }
 
@@ -89,7 +89,7 @@ impl AggregatedPublicKeys {
         &mut self,
         reveals: &RevealsMerged,
         masked_cards: &mut [MaskedCard],
-    ) -> Result<(), CardProtocolError> {  // Not CryptoError?
+    ) -> CardResult<()> {  // Not CryptoError?
         let idx = self.0.player_index(&reveals.pk)?;
         for (rt,mc) in verify_merged_reveals(reveals,masked_cards.iter())?.iter().zip(masked_cards.iter_mut()) {
             cards_protocol::reveal::update_masked_card(mc,rt);
@@ -111,6 +111,6 @@ pub fn prove_merged_reveals<'a>(
 pub fn verify_merged_reveals<'a,'b>(
     reveals: &'a RevealsMerged,
     masked_cards: impl IntoIterator<Item=&'b MaskedCard>,
-) -> Result<&'a [RevealToken], CardProtocolError> {  // Not CryptoError?
+) -> CardResult<&'a [RevealToken]> {  // Not CryptoError?
     Ok(crate::PARAMS.verify_merged_reveals(reveals, masked_cards)?)
 }
