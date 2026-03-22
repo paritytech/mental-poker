@@ -85,15 +85,6 @@ impl Valid for AggregatedPublicKeys {
 // fn prove_merged_reveals
 
 impl AggregatedPublicKeys {
-    /// Shuffle cards and produce proof using system randomness
-    ///
-    /// Verified using `verify_shuffle`
-    pub fn shuffle_and_remask(
-        &self, sk: &PlayerKeypair, deck: &[MaskedCard],
-    ) -> Result<ShuffleMessage, CardProtocolError> {
-        self.0.shuffle_and_remask(&mut getrandom_or_panic(), sk, deck)
-    }
-
     pub fn verify_quit(
         &mut self,
         reveals: &RevealsMerged,

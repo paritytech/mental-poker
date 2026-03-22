@@ -18,6 +18,9 @@ pub mod keys_wasm;
 #[cfg(feature="wasm")]
 pub use keys_wasm::PlayerKeypairWasm;
 
+mod shuffle;
+pub use shuffle::AccumulateShuffles;
+
 mod reveals;
 pub use reveals::AccumulateReveals;
 

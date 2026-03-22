@@ -1,6 +1,5 @@
 use super::{
     IntoTranscript,Transcript,
-    CanonicalSerialize,CanonicalDeserialize,
     Parameters, setup::mid_factor,
     error::CardProtocolError,
     Scalar, keys::*,
@@ -8,7 +7,9 @@ use super::{
 };
 
 use ark_ec::{AffineRepr,CurveGroup};
-use ark_std::{borrow::{ToOwned}, ops::Deref, vec::Vec, Zero, rand::{Rng,CryptoRng}, UniformRand};
+use ark_std::{borrow::{ToOwned}, io::{Read}, ops::Deref, vec::Vec, Zero, rand::{Rng,CryptoRng}, UniformRand};
+
+use ark_serialize::{CanonicalSerialize,CanonicalDeserialize,SerializationError,Compress,Validate,Valid};
 
 #[cfg(feature="serde")]
 use ark_serialize::{CompressedChecked};
@@ -261,5 +262,98 @@ impl<'p,C: CurveGroup> AggregatedPublicKeys<'p,C> {
         )?;
         self.parameters().verify_key_ownership(pk, &mut t, sig)?;
         Ok((pk,new_deck))
+    }
+
+    pub fn accumulate_shuffles(self, deck: Vec<MaskedCard<C>>) -> AccumulateShuffles<'p,C> {
+        let remaining_key = self.aggregate_key().into_group();
+        AccumulateShuffles { apk: self, remaining_key, deck, }
+    }
+}
+
+
+#[derive(Clone,CanonicalSerialize)]
+#[cfg_attr(feature="serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature="serde", serde(from = "CompressedChecked<Self>", into = "CompressedChecked<Self>"))]
+pub struct AccumulateShuffles<'p,C: CurveGroup> {
+    apk: AggregatedPublicKeys<'p,C>,
+    remaining_key: C,
+    deck: Vec<MaskedCard<C>>,
+}
+
+#[cfg(feature="serde")]
+impl<C: CurveGroup> From<CompressedChecked<AccumulateShuffles<C>>> for AccumulateShuffles<C> {
+    fn from(s: CompressedChecked<AccumulateShuffles<C>>) -> Self { s.0 }
+}
+
+impl<'p, C: CurveGroup> Valid for AccumulateShuffles<'p,C> {
+    fn check(&self) -> Result<(), SerializationError> {
+        self.apk.check()?;
+        self.remaining_key.check()?;
+        self.deck.check()
+    }
+}
+
+impl<'p,C: CurveGroup> AccumulateShuffles<'p,C> {
+    pub fn parameters(&self) -> &'p crate::Parameters<C> { self.apk.parameters() }
+    pub fn apk(&self) -> &AggregatedPublicKeys<'p,C> { &self.apk }
+    pub fn remaining_key(&self) -> &C { &self.remaining_key }
+    pub fn deck(&self) -> &[MaskedCard<C>] { &self.deck }
+
+    // Should this apply our own shuffle?
+    pub fn do_shuffle<R: Rng+CryptoRng>( // shuffle_and_remask
+        &mut self,
+        rng: &mut R,
+        sk: &PlayerKeypair<C>,
+    ) -> Result<ShuffleMessage<C>, CardProtocolError> {
+        self.apk.shuffle_and_remask(rng, sk, self.deck.as_slice())
+    }
+
+    /// Apply the shuffle
+    ///
+    /// Always applies valid shuffles, even if not by a participant,
+    /// so if you must enforce the origin then check `shuffle.pk`
+    /// before invoking this.
+    pub fn apply_shuffle<'a>(
+        &mut self, shuffle: &'a ShuffleMessage<C>
+    ) -> Result<(&'a PlayerPublicKey<C>,Option<usize>), CardProtocolError>
+    {
+        let (pk,deck) = self.apk.verify_shuffle(&self.deck, shuffle)?;
+        self.deck.clear();
+        self.deck.extend_from_slice(deck);
+        let i = self.apk.player_index(&shuffle.pk).ok();
+        if i.is_some()  {
+            self.remaining_key = self.remaining_key - pk;
+        }
+        Ok((pk,i))
+    }
+
+    pub fn is_completed(&self) -> bool { self.remaining_key.is_zero() }
+
+    /// If successful, this leaves `self` unusable.
+    pub fn completed(&mut self) -> Option<(AggregatedPublicKeys<'p,C>,Vec<MaskedCard<C>>)> {
+        if !self.is_completed() { return None; }
+        let mut apk = self.apk.parameters().create_aggregate_keys();
+        core::mem::swap(&mut apk, &mut self.apk);
+        let deck = core::mem::replace(&mut self.deck, Vec::new());
+        Some((apk,deck))
+    }
+
+    /// Deserialize `AccumulateShuffles` without checking anything.
+    pub fn deserialize_with_mode<R: Read>(
+        mut reader: R,
+        compress: Compress,
+        validate: Validate,
+        parameters: &'p Parameters<C>,
+    ) -> Result<AccumulateShuffles<'p,C>,SerializationError> {
+        Ok(AccumulateShuffles {
+            apk: AggregatedPublicKeys::deserialize_with_mode(&mut reader,compress,validate,parameters)?,
+            remaining_key: CanonicalDeserialize::deserialize_with_mode(&mut reader,compress,validate)?,
+            deck: CanonicalDeserialize::deserialize_with_mode(&mut reader,compress,validate)?,
+        })
+    }
+
+    /// Deserialize `AggregatedPublicKeys` from a serialized `Vec<PlayerPublicKey<C>>`.   // without checking anything.
+    pub fn deserialize_compressed<R: Read>(r: R, parameters: &'p Parameters<C>) -> Result<AccumulateShuffles<'p,C>,SerializationError> {
+        Self::deserialize_with_mode(r,Compress::Yes,Validate::Yes,parameters)
     }
 }

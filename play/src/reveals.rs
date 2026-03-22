@@ -31,7 +31,7 @@ impl core::ops::DerefMut for AccumulateReveals {
 }
 #[cfg(feature="serde")]
 impl From<CompressedChecked<AccumulateReveals>> for AccumulateReveals {
-    fn from(sig: CompressedChecked<AccumulateReveals>) -> Self { sig.0 }
+    fn from(s: CompressedChecked<AccumulateReveals>) -> Self { s.0 }
 }
 impl CanonicalDeserialize for AccumulateReveals {
     fn deserialize_with_mode<R: ark_std::io::Read>(
@@ -43,9 +43,7 @@ impl CanonicalDeserialize for AccumulateReveals {
     }
 }
 impl Valid for AccumulateReveals {
-    fn check(&self) -> Result<(), SerializationError> {
-        self.0.check()
-    }
+    fn check(&self) -> Result<(), SerializationError> { self.0.check() }
 }
 
 impl AccumulateReveals {
@@ -54,11 +52,17 @@ impl AccumulateReveals {
     }
 }
 
+#[cfg_attr(feature="wasm", wasm_bindgen)]
+impl AccumulateReveals {
+    pub fn is_completed(&self) -> bool { self.0.is_completed() }
+}
+
 #[cfg(feature="wasm")]
 #[wasm_bindgen]
 impl AccumulateReveals {
+    #[wasm_bindgen(js_name="add_reveal")]
     pub fn add_reveal_wasm(&mut self, reveal_message: &[u8]) -> wasm::ResultWasm<()> {
-        let reveal_message = cards_protocol::RevealMessage::deserialize_compressed(reveal_message) ?;
+        let reveal_message = RevealMessage::deserialize_compressed(reveal_message) ?;
         Ok(self.add_reveal(&reveal_message)?)
     }
 
@@ -71,10 +75,6 @@ impl AccumulateReveals {
     pub fn wasm_serialize(&self) -> Vec<u8> {
         use ez_serialize::EzSerialize;
         self.serialize_to_vec().unwrap()
-    }
-
-    pub fn is_completed_wasm(&self) -> bool {
-        self.0.is_completed()
     }
 
     /// Unmask the card (once all reveals are accumulated) and return its deck position.
