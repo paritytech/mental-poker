@@ -233,6 +233,17 @@ impl<'p,C: CurveGroup>  AccumulateReveals<'p,C> {
     pub fn masked_card(&self) -> &MaskedCard<C> { &self.masked_card }
     pub fn token(&self) -> &RevealToken<C> { &self.token }
 
+    /// Prove your reveal component for a draw 
+    ///
+    /// You must call this whenever a drawn card is not intended for you.
+    pub fn prove_reveal<R: Rng+CryptoRng>(
+        &mut self,
+        rng: &mut R,
+        sk: &PlayerKeypair<C>,
+    ) -> RevealMessage<C> {
+        self.parameters.prove_single_reveal_token(rng,sk,&self.masked_card)
+    }
+
     pub fn add_reveal(&mut self, reveal_message: &RevealMessage<C>) -> CardResult<()> {
         if self.masked_card != reveal_message.masked_card {
             return Err(CardProtocolError::WrongCard);
