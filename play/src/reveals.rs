@@ -4,6 +4,8 @@
 use crate::*;
 
 use ark_serialize::{CanonicalSerialize,CanonicalDeserialize,SerializationError,Compress,Validate,Valid};
+#[cfg(feature="wasm")]
+use ez_serialize::EzSerialize;
 #[cfg(feature="serde")]
 use ark_serialize::{CompressedChecked};
 #[cfg(feature="serde")]
@@ -47,6 +49,13 @@ impl Valid for AccumulateReveals {
 }
 
 impl AccumulateReveals {
+    pub fn prove_reveal(
+        &self,
+        sk: &PlayerKeypair,
+    ) -> RevealMessage {
+        self.0.prove_reveal(&mut getrandom_or_panic(), sk)
+    }
+
     pub fn add_reveal(&mut self, reveal_message: &RevealMessage) -> CardResult<()> {
         self.0.add_reveal(reveal_message)
     }
@@ -60,6 +69,14 @@ impl AccumulateReveals {
 #[cfg(feature="wasm")]
 #[wasm_bindgen]
 impl AccumulateReveals {
+    #[wasm_bindgen(js_name="prove_reveal")]
+    pub fn prove_reveal_wasm(
+        &self,
+        sk: &PlayerKeypairWasm,
+    ) -> Vec<u8> /* RevealMessage */ {
+        self.prove_reveal(&sk.0).serialize_to_vec().unwrap()
+    }
+
     #[wasm_bindgen(js_name="add_reveal")]
     pub fn add_reveal_wasm(&mut self, reveal_message: &[u8]) -> wasm::ResultWasm<()> {
         let reveal_message = RevealMessage::deserialize_compressed(reveal_message) ?;
@@ -73,7 +90,6 @@ impl AccumulateReveals {
 
     #[wasm_bindgen(js_name="serialize")]
     pub fn wasm_serialize(&self) -> Vec<u8> {
-        use ez_serialize::EzSerialize;
         self.serialize_to_vec().unwrap()
     }
 

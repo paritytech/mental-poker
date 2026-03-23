@@ -237,7 +237,7 @@ impl<'p,C: CurveGroup>  AccumulateReveals<'p,C> {
     ///
     /// You must call this whenever a drawn card is not intended for you.
     pub fn prove_reveal<R: Rng+CryptoRng>(
-        &mut self,
+        &self,
         rng: &mut R,
         sk: &PlayerKeypair<C>,
     ) -> RevealMessage<C> {
