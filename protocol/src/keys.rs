@@ -216,6 +216,41 @@ fn point_binary_search<C: CurveGroup>(ps: &[PlayerPublicKey<C>], p: &PlayerPubli
     ps.binary_search_by_key(&xy_key::<C>(p),xy_key::<C>)
 }
 
+impl<'p, C: CurveGroup> CanonicalSerialize for AggregatedPublicKeys<'p, C> {
+    /// One public key per player, plus 4 byte size.
+    fn serialize_with_mode<W: Write>(
+        &self,
+        writer: W,
+        compress: Compress,
+    ) -> Result<(), SerializationError> {
+        self.players_public_keys.serialize_with_mode(writer,compress)
+    }
+
+    fn serialized_size(&self, compress: Compress) -> usize {
+        self.players_public_keys.serialized_size(compress)
+    }
+}
+impl<'p, C: CurveGroup> Valid for AggregatedPublicKeys<'p, C> {
+    fn check(&self) -> Result<(), SerializationError> {
+        self.players_public_keys.check()
+    }
+    fn batch_check<'a>(
+        batch: impl Iterator<Item = &'a Self> + Send,
+    ) -> Result<(), SerializationError>
+    where Self: 'a, 
+    {
+        Valid::batch_check(batch.flat_map(|v| v.players_public_keys.iter()))
+    }
+}
+
+impl<'a,'p, C: CurveGroup> IntoIterator for &'a AggregatedPublicKeys<'p,C> {
+    type Item = &'a PlayerPublicKey<C>;
+    type IntoIter = core::slice::Iter<'a, PlayerPublicKey<C>>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.players_public_keys.iter()
+    }
+}
+
 impl<'p, C: CurveGroup> AggregatedPublicKeys<'p, C> {
     pub fn parameters(&self) -> &'p Parameters<C> {
         self.parameters
@@ -311,39 +346,36 @@ impl<'p, C: CurveGroup> AggregatedPublicKeys<'p, C> {
     pub fn deserialize_compressed<R: Read>(r: R, parameters: &'p Parameters<C>) -> Result<AggregatedPublicKeys<'p,C>,SerializationError> {
         Self::deserialize_with_mode(r,Compress::Yes,Validate::Yes,parameters)
     }
-}
 
-impl<'p, C: CurveGroup> CanonicalSerialize for AggregatedPublicKeys<'p, C> {
-    /// One public key per player, plus 4 byte size.
-    fn serialize_with_mode<W: Write>(
-        &self,
-        writer: W,
-        compress: Compress,
-    ) -> Result<(), SerializationError> {
-        self.players_public_keys.serialize_with_mode(writer,compress)
-    }
-
-    fn serialized_size(&self, compress: Compress) -> usize {
-        self.players_public_keys.serialized_size(compress)
-    }
-}
-impl<'p, C: CurveGroup> Valid for AggregatedPublicKeys<'p, C> {
-    fn check(&self) -> Result<(), SerializationError> {
-        self.players_public_keys.check()
-    }
-    fn batch_check<'a>(
-        batch: impl Iterator<Item = &'a Self> + Send,
-    ) -> Result<(), SerializationError>
-    where Self: 'a, 
-    {
-        Valid::batch_check(batch.flat_map(|v| v.players_public_keys.iter()))        
+    pub fn remaining(&self) -> Remaining<C> {
+        let l = self.players().len();
+        let remaining_mask = if l <= 32 { (1u64 << l)-1 } else { 0 } as u32;
+        let remaining_key = self.aggregate_key().into_group();
+        Remaining { remaining_mask, remaining_key, }
     }
 }
 
-impl<'a,'p, C: CurveGroup> IntoIterator for &'a AggregatedPublicKeys<'p,C> {
-    type Item = &'a PlayerPublicKey<C>;
-    type IntoIter = core::slice::Iter<'a, PlayerPublicKey<C>>;
-    fn into_iter(self) -> Self::IntoIter {
-        self.players_public_keys.iter()
+
+#[derive(Clone,CanonicalSerialize,CanonicalDeserialize)]
+pub struct Remaining<C: CurveGroup> {
+    remaining_mask: u32,
+    remaining_key: C,
+}
+
+impl<C: CurveGroup> Remaining<C> {
+    /// Always returns zero if more than 32 players
+    pub fn remaining_mask(&self) -> u32 { self.remaining_mask }
+
+    pub fn remaining_key(&self) -> &C { &self.remaining_key }
+
+    pub fn is_completed(&self) -> bool { self.remaining_key.is_zero() }
+
+    pub fn participated<'p>(&mut self, apk: &AggregatedPublicKeys<'p,C>, pk: &PlayerPublicKey<C>) -> Option<usize> {
+        let i = apk.player_index(pk).ok();
+        if i.is_some()  {
+            self.remaining_mask &= !(1u32 << i.unwrap());
+            self.remaining_key = self.remaining_key - pk;
+        }
+        i
     }
 }
