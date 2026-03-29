@@ -211,27 +211,36 @@ impl<'p,C: CurveGroup>  AggregatedPublicKeys<'p,C> {
         AccumulateReveals {
             parameters: self.parameters(),
             remaining_key: self.aggregate_key().into_group(),
-            masked_card,
-            token: RevealToken::<C>::zero(),
+            track: TrackReveal::new(masked_card),
         }
     }
 }
 
+#[derive(Clone,CanonicalSerialize,CanonicalDeserialize,Debug)]
+pub(crate) struct TrackReveal<C: CurveGroup> {
+    pub(crate) masked_card: MaskedCard<C>,
+    pub(crate) token: RevealToken<C>,
+}
+
+impl<C: CurveGroup> TrackReveal<C> {
+    pub fn new(masked_card: MaskedCard<C>) -> TrackReveal<C> {
+        TrackReveal { masked_card, token: RevealToken::<C>::zero(), }
+    }
+}
+
 /// Verify and accumulate `RevealMessage`s
-///
 #[derive(Clone)]
 pub struct AccumulateReveals<'p,C: CurveGroup> {
     pub(crate) parameters: &'p crate::Parameters<C>,
     pub(crate) remaining_key: C,
-    pub(crate) masked_card: MaskedCard<C>,
-    pub(crate) token: RevealToken<C>,
+    pub(crate) track: TrackReveal<C>,
 }
 
 impl<'p,C: CurveGroup>  AccumulateReveals<'p,C> {
     pub fn parameters(&self) -> &'p crate::Parameters<C> { self.parameters }
     pub fn remaining_key(&self) -> &C { &self.remaining_key }
-    pub fn masked_card(&self) -> &MaskedCard<C> { &self.masked_card }
-    pub fn token(&self) -> &RevealToken<C> { &self.token }
+    pub fn masked_card(&self) -> &MaskedCard<C> { &self.track.masked_card }
+    pub fn token(&self) -> &RevealToken<C> { &self.track.token }
 
     /// Prove your reveal component for a draw 
     ///
@@ -241,15 +250,15 @@ impl<'p,C: CurveGroup>  AccumulateReveals<'p,C> {
         rng: &mut R,
         sk: &PlayerKeypair<C>,
     ) -> RevealMessage<C> {
-        self.parameters.prove_single_reveal_token(rng,sk,&self.masked_card)
+        self.parameters.prove_single_reveal_token(rng,sk,&self.track.masked_card)
     }
 
     pub fn add_reveal(&mut self, reveal_message: &RevealMessage<C>) -> CardResult<()> {
-        if self.masked_card != reveal_message.masked_card {
+        if self.track.masked_card != reveal_message.masked_card {
             return Err(CardProtocolError::WrongCard);
         }
         self.parameters.verify_single_reveal(reveal_message)?;
-        self.token = self.token + reveal_message.token;
+        self.track.token = self.track.token + reveal_message.token;
         self.remaining_key = self.remaining_key - reveal_message.pk;
         Ok(())
     }
@@ -259,8 +268,8 @@ impl<'p,C: CurveGroup>  AccumulateReveals<'p,C> {
     /// If the remaining aggregate publickey passes `.is_zero()` then
     /// the remaining ciphertext converts to
     pub fn status(&self) -> (AggregatePublicKey<C>,MaskedCard<C>) {
-        let mut masked_card = self.masked_card.clone();
-        update_masked_card(&mut masked_card,&self.token);
+        let mut masked_card = self.track.masked_card.clone();
+        update_masked_card(&mut masked_card, &self.track.token);
         (self.remaining_key.into_affine(),masked_card)
     }
 
@@ -268,7 +277,7 @@ impl<'p,C: CurveGroup>  AccumulateReveals<'p,C> {
 
     pub fn completed(&self) -> Option<UnmaskedCard<C>> {
         if !self.is_completed() { return None; }
-        Some(reveal_unchecked(&self.token,&self.masked_card))
+        Some(reveal_unchecked(&self.track.token,&self.track.masked_card))
     }
 
     pub fn is_completed_for(&self, pk: &PlayerPublicKey<C>) -> bool {
@@ -292,8 +301,7 @@ impl<'p,C: CurveGroup>  AccumulateReveals<'p,C> {
         Ok(AccumulateReveals {
             parameters,
             remaining_key: CanonicalDeserialize::deserialize_with_mode(&mut reader,compress,validate)?,
-            masked_card: CanonicalDeserialize::deserialize_with_mode(&mut reader,compress,validate)?,
-            token: CanonicalDeserialize::deserialize_with_mode(&mut reader,compress,validate)?,
+            track: CanonicalDeserialize::deserialize_with_mode(&mut reader,compress,validate)?,
         })
     }
 
@@ -311,23 +319,20 @@ impl<'p, C: CurveGroup> CanonicalSerialize for AccumulateReveals<'p,C> {
         compress: Compress,
     ) -> Result<(), SerializationError> {
         self.remaining_key.serialize_with_mode(&mut writer,compress)?;
-        self.masked_card.serialize_with_mode(&mut writer,compress)?;
-        self.token.serialize_with_mode(&mut writer,compress)
+        self.track.serialize_with_mode(&mut writer,compress)
     }
 
     /// If `c = C::compressed_size()`, often 32 bytes, then
     /// `AccumulateReveals` serializes in `4 c` bytes when compressed.
     fn serialized_size(&self, compress: Compress) -> usize {
         self.remaining_key.serialized_size(compress)
-        + self.masked_card.serialized_size(compress)
-        + self.token.serialized_size(compress)
+        + self.track.serialized_size(compress)
     }
 }
 impl<'p, C: CurveGroup> Valid for AccumulateReveals<'p,C> {
     fn check(&self) -> Result<(), SerializationError> {
         self.remaining_key.check()?;
-        self.masked_card.check()?;
-        self.token.check()
+        self.track.check()
     }
 }
 
