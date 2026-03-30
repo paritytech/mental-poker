@@ -356,7 +356,7 @@ impl<'p, C: CurveGroup> AggregatedPublicKeys<'p, C> {
 }
 
 
-#[derive(Clone,CanonicalSerialize,CanonicalDeserialize)]
+#[derive(Clone,CanonicalSerialize,CanonicalDeserialize,Debug)]
 pub struct Remaining<C: CurveGroup> {
     remaining_mask: u32,
     remaining_key: C,
