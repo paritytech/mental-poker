@@ -79,6 +79,47 @@ pub fn verify_player(
 
 #[wasm_bindgen]
 impl AggregatedPublicKeys {
+    /// Build AggregatedPublicKeys from player hellos.
+    /// `hellos_and_names` is a flat buffer: [num_players: u32 LE, then for each:
+    ///   hello_len: u32 LE, hello_bytes, name_len: u32 LE, name_bytes]
+    #[wasm_bindgen(js_name="buildFromHellos")]
+    pub fn wasm_build_from_hellos(hellos_and_names: &[u8]) -> wasm::ResultWasm<AggregatedPublicKeys> {
+        use alloc::vec::Vec;
+        let mut cursor = 0usize;
+        if hellos_and_names.len() < 4 { return Err("too short".into()); }
+        let num = u32::from_le_bytes([
+            hellos_and_names[0], hellos_and_names[1],
+            hellos_and_names[2], hellos_and_names[3],
+        ]) as usize;
+        cursor += 4;
+
+        let mut players: Vec<(&[u8], &[u8])> = Vec::with_capacity(num);
+        for _ in 0..num {
+            if hellos_and_names.len() < cursor + 4 { return Err("bad format".into()); }
+            let hello_len = u32::from_le_bytes([
+                hellos_and_names[cursor], hellos_and_names[cursor+1],
+                hellos_and_names[cursor+2], hellos_and_names[cursor+3],
+            ]) as usize;
+            cursor += 4;
+            if hellos_and_names.len() < cursor + hello_len { return Err("bad format".into()); }
+            let hello = &hellos_and_names[cursor..cursor + hello_len];
+            cursor += hello_len;
+
+            if hellos_and_names.len() < cursor + 4 { return Err("bad format".into()); }
+            let name_len = u32::from_le_bytes([
+                hellos_and_names[cursor], hellos_and_names[cursor+1],
+                hellos_and_names[cursor+2], hellos_and_names[cursor+3],
+            ]) as usize;
+            cursor += 4;
+            if hellos_and_names.len() < cursor + name_len { return Err("bad format".into()); }
+            let name = &hellos_and_names[cursor..cursor + name_len];
+            cursor += name_len;
+
+            players.push((hello, name));
+        }
+        Ok(keys::build_aggregate_keys(&players)?)
+    }
+
     #[wasm_bindgen(js_name="deserialize")]
     pub fn wasm_deserialize(selfy: &[u8]) -> wasm::ResultWasm<AggregatedPublicKeys> {
         Ok(AggregatedPublicKeys::deserialize(selfy) ?)

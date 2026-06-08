@@ -80,9 +80,20 @@ impl Valid for AggregatedPublicKeys {
     }
 }
 
-// fn verify_n_add
-// fn verify_shuffle
-// fn prove_merged_reveals
+/// Build AggregatedPublicKeys from a list of (hello_bytes, name_bytes) pairs.
+/// Verifies each player's hello and adds their key to the aggregation.
+pub fn build_aggregate_keys(
+    players: &[(&[u8], &[u8])], // (hello_bytes, name_bytes)
+) -> CardResult<AggregatedPublicKeys> {
+    use ez_serialize::EzDeserialize;
+    let mut apk = AggregatedPublicKeys(PARAMS.create_aggregate_keys());
+    for (hello_bytes, name_bytes) in players {
+        let hello = PlayerHello::deserialize(*hello_bytes)
+            .map_err(|_| CardProtocolError::PlayerNotPresent)?;
+        apk.0.verify_n_add(hello, *name_bytes)?;
+    }
+    Ok(apk)
+}
 
 impl AggregatedPublicKeys {
     pub fn verify_quit(
