@@ -84,7 +84,6 @@ impl AggregatedPublicKeys {
     ///   hello_len: u32 LE, hello_bytes, name_len: u32 LE, name_bytes]
     #[wasm_bindgen(js_name="buildFromHellos")]
     pub fn wasm_build_from_hellos(hellos_and_names: &[u8]) -> wasm::ResultWasm<AggregatedPublicKeys> {
-        use alloc::vec::Vec;
         let mut cursor = 0usize;
         if hellos_and_names.len() < 4 { return Err("too short".into()); }
         let num = u32::from_le_bytes([
