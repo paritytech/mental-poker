@@ -8,11 +8,9 @@ mod test;
 const NAME: &'static [u8] = b"Schnorr Identification";
 const ERROR: &'static str = "Schnorr Identification";
 
-use crate::{IntoTranscript, error::*};
-use crate::zkp::ArgumentOfKnowledge;
+use crate::{IntoTranscript, error::*, zkp::*};
 use ark_ec::{CurveGroup,PrimeGroup};
 use ark_std::marker::PhantomData;
-use ark_std::rand::{Rng, CryptoRng};
 
 pub struct SchnorrIdentification<C: CurveGroup> {
     _group: PhantomData<C>,

@@ -6,10 +6,10 @@ mod tests;
 use crate::{
     IntoTranscript, error::*,
     vector_commitment::HomomorphicCommitmentScheme,
-    zkp::ArgumentOfKnowledge,
+    zkp::*,
 };
 use ark_ff::Field;
-use ark_std::{marker::PhantomData, vec::Vec, rand::{Rng,CryptoRng}};
+use ark_std::{marker::PhantomData, vec::Vec};
 
 pub struct HadamardProductArgument<'a, F, Comm>
 where

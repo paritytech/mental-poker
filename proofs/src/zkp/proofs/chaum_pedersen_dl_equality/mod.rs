@@ -9,10 +9,9 @@ const NAME: &'static [u8] = b"Chaum-Pedersen";
 const ERROR: &'static str = "Chaum-Pedersen";
 const LENGTH_ERROR: &'static str = "Chaum-Pedersen, wrong statemeent length";
 
-use crate::{IntoTranscript, transcript::Transcript, error::*};
-use crate::zkp::ArgumentOfKnowledge;
+use crate::{IntoTranscript, transcript::Transcript, error::*, zkp::*};
 use ark_ec::{CurveGroup,PrimeGroup};
-use ark_std::{array::from_ref as one, marker::PhantomData, rand::{Rng, CryptoRng}, vec::Vec};
+use ark_std::{array::from_ref as one, marker::PhantomData, vec::Vec};
 
 pub struct DLEquality<'a, C: CurveGroup> {
     _group: PhantomData<&'a C>,

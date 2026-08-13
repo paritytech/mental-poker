@@ -8,11 +8,11 @@ use crate::{
     homomorphic_encryption::HomomorphicEncryptionScheme,
     utils::permutation::Permutation,
     vector_commitment::HomomorphicCommitmentScheme,
-    zkp::ArgumentOfKnowledge,
+    zkp::*,
 };
 
 use ark_ff::Field;
-use ark_std::{marker::PhantomData, rand::{Rng,CryptoRng}};
+use ark_std::{marker::PhantomData};
 
 pub struct ShuffleArgument<
     'a,

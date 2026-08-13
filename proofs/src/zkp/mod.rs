@@ -1,4 +1,6 @@
 use crate::{IntoTranscript, error::CryptoResult};
+
+#[cfg(feature="prover")]
 use ark_std::rand::{Rng, CryptoRng};
 
 pub mod arguments;

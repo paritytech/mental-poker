@@ -3,11 +3,13 @@ pub mod proof;
 pub mod prover;
 pub mod tests;
 
-use crate::{error::*, IntoTranscript};
-use crate::vector_commitment::HomomorphicCommitmentScheme;
-use crate::zkp::{arguments::scalar_powers, ArgumentOfKnowledge};
+use crate::{
+    IntoTranscript, error::*, 
+    vector_commitment::HomomorphicCommitmentScheme,
+    zkp::{*, arguments::scalar_powers}, 
+};
 use ark_ff::Field;
-use ark_std::{marker::PhantomData, vec::Vec, rand::{Rng, CryptoRng}};
+use ark_std::{marker::PhantomData, vec::Vec};
 
 pub struct ZeroValueArgument<'a, F, Comm>
 where
