@@ -1,4 +1,5 @@
 pub mod proof;
+#[cfg(feature="prover")]
 pub mod prover;
 
 #[cfg(test)]
@@ -73,6 +74,7 @@ impl<'a, C: CurveGroup> ArgumentOfKnowledge for DLEquality<'a, C> {
     type Witness = Witness<C>;
     type Proof = proof::Proof<C>;
 
+    #[cfg(feature="prover")]
     fn prove<R: Rng+CryptoRng>(
         rng: &mut R,
         common_reference_string: &Self::CommonReferenceString,

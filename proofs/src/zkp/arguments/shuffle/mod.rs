@@ -1,4 +1,5 @@
 pub mod proof;
+#[cfg(feature="prover")]
 pub mod prover;
 mod tests;
 
@@ -35,6 +36,7 @@ where
     type Witness = Witness<'a, F>;
     type Proof = proof::Proof<F, Enc, Comm>;
 
+    #[cfg(feature="prover")]
     fn prove<R: Rng+CryptoRng>(
         rng: &mut R,
         common_reference_string: &Self::CommonReferenceString,

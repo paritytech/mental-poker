@@ -30,8 +30,9 @@ ark-secp256k1.workspace = true
 criterion = "0.3"
 
 [features]
-default = ["std"]
+default = ["std","prover"]
 std = ["ark-std/std", "ark-ec/std", "ark-ff/std", "ark-serialize/std"] # "ark-transcript/std"
+prover = []
 
 [[bench]]
 name = "shuffle"
