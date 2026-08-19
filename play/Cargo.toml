@@ -41,8 +41,9 @@ wasm-bindgen = { workspace = true, optional = true }
 crate-type = ["rlib", "cdylib"]
 
 [features]
-default = ["std"]
+default = ["std", "prover"]
 std = ["ark-std/std", "ark-serialize/std", "cards-deck/std", "cards-protocol/std", "cards-proofs/std", "wasm-bindgen?/std"]
+prover = ["cards-protocol/prover", "cards-proofs/prover"]
 # "ark-ec/std", "ark-ff/std",
 serde = [] # ["dep:serde", "ark-serialize/serde"]
 wasm = ["dep:wasm-bindgen", "getrandom_or_panic/getrandom", "getrandom/js"]

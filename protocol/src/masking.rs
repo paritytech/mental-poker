@@ -8,7 +8,9 @@ use crate::{
 
 use ark_ec::{AffineRepr,CurveGroup};
 use ark_ff::{Field,One,Zero};
-use ark_std::{borrow::BorrowMut, ops::Mul, vec::Vec, rand::{Rng,CryptoRng}};
+use ark_std::{borrow::BorrowMut, ops::Mul, vec::Vec};
+#[cfg(feature="prover")]
+use ark_std::rand::{Rng,CryptoRng};
 
 use cards_proofs::{
     error::CryptoError,
@@ -96,6 +98,7 @@ impl<C: CurveGroup> crate::Parameters<C> {
     }
 
     /// Create a `MaskedCard` from an explicitly specified `UnmaskedCard`.
+    #[cfg(feature="prover")]
     pub fn prove_mask<R: Rng+CryptoRng>(
         &self,
         rng: &mut R,
@@ -175,6 +178,7 @@ pub struct MaskingsMerged<C: CurveGroup> {
 }
 
 impl<'p,C: CurveGroup> crate::keys::AggregatedPublicKeys<'p,C> {
+    #[cfg(feature="prover")]
     pub fn prove_masks<'a,R: Rng+CryptoRng>(
         &self,
         rng: &mut R,

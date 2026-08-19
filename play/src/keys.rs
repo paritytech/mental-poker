@@ -20,6 +20,7 @@ pub fn player_deserialize(selfy: &[u8]) -> Result<PlayerKeypair,SerializationErr
 }
 
 /// Include any delegating public key in `player_public_info` for back certification
+#[cfg(feature="prover")]
 pub fn prove_player(
     key: &PlayerKeypair,
     player_public_info: impl IntoTranscript,
@@ -29,6 +30,7 @@ pub fn prove_player(
 
 /// Include any delegating public key in `player_public_info` for back certification
 // We cannot return a Vec<u8> plus another typeunder wasm-bindgen ?!?
+#[cfg(feature="prover")]
 pub fn generate_player(
     player_public_info: impl IntoTranscript,
 ) -> (PlayerHello, PlayerKeypair) {
@@ -112,6 +114,7 @@ impl AggregatedPublicKeys {
 
 // We would not typically call prove_merged_reveals and verify_merged_reveals directly.
 
+#[cfg(feature="prover")]
 pub fn prove_merged_reveals<'a>(
     key: &PlayerKeypair,
     masked_cards: impl IntoIterator<Item=&'a MaskedCard>,
