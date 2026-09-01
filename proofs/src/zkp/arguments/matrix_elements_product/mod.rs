@@ -1,4 +1,5 @@
 pub mod proof;
+#[cfg(feature="prover")]
 pub mod prover;
 mod tests;
 
@@ -6,10 +7,10 @@ mod tests;
 use crate::{
     IntoTranscript, error::*,
     vector_commitment::HomomorphicCommitmentScheme,
-    zkp::ArgumentOfKnowledge,
+    zkp::*,
 };
 use ark_ff::Field;
-use ark_std::{marker::PhantomData, vec::Vec, rand::{Rng,CryptoRng}};
+use ark_std::{marker::PhantomData, vec::Vec};
 
 pub struct ProductArgument<'a, F, Comm>
 where
@@ -30,6 +31,7 @@ where
     type Witness = Witness<'a, Scalar>;
     type Proof = proof::Proof<Scalar, Comm>;
 
+    #[cfg(feature="prover")]
     fn prove<R: Rng+CryptoRng>(
         rng: &mut R,
         common_reference_string: &Self::CommonReferenceString,

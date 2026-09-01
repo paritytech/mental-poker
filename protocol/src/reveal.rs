@@ -6,7 +6,9 @@ use crate::{
 };
 
 use ark_ec::{AffineRepr,CurveGroup};
-use ark_std::{io::{Read,Write}, vec::Vec, rand::{Rng,CryptoRng}, Zero}; // io::{self,Write}
+use ark_std::{io::{Read,Write}, vec::Vec, Zero}; // io::{self,Write}
+#[cfg(feature="prover")]
+use ark_std::rand::{Rng,CryptoRng};
 use ark_serialize::{CanonicalSerialize,CanonicalDeserialize,SerializationError,Compress,Validate,Valid};
 
 #[cfg(feature="serde")]
@@ -116,6 +118,7 @@ impl<C: CurveGroup> PlayerKeypair<C> {
 }
 
 impl<C: CurveGroup> crate::Parameters<C> {
+    #[cfg(feature="prover")]
     pub fn prove_reveal<R: Rng+CryptoRng>(
         &self,
         rng: &mut R,
@@ -169,6 +172,7 @@ impl<C: CurveGroup> crate::Parameters<C> {
         Ok(&reveal.token)
     }
 
+    #[cfg(feature="prover")]
     pub fn prove_single_reveal_token<R: Rng+CryptoRng>(
         &self,
         rng: &mut R,
@@ -245,6 +249,7 @@ impl<'p,C: CurveGroup>  AccumulateReveals<'p,C> {
     /// Prove your reveal component for a draw 
     ///
     /// You must call this whenever a drawn card is not intended for you.
+    #[cfg(feature="prover")]
     pub fn prove_reveal<R: Rng+CryptoRng>(
         &self,
         rng: &mut R,
@@ -362,6 +367,7 @@ fn affines_from_tokens<C: CurveGroup>(tokens: &[RevealToken<C>]) -> &[C::Affine]
 
 impl<C: CurveGroup> crate::Parameters<C> {
     /// Create the player's reveal proof a batch of masked cards
+    #[cfg(feature="prover")]
     pub fn prove_merged_reveals<'a,R: Rng+CryptoRng>(
         &self,
         rng: &mut R,

@@ -1,4 +1,6 @@
 use crate::{IntoTranscript, error::CryptoResult};
+
+#[cfg(feature="prover")]
 use ark_std::rand::{Rng, CryptoRng};
 
 pub mod arguments;
@@ -10,6 +12,7 @@ pub trait ArgumentOfKnowledge {
     type Witness;
     type Proof;
 
+    #[cfg(feature="prover")]
     fn prove<R: Rng+CryptoRng>(
         system_rng: &mut R,
         common_reference_string: &Self::CommonReferenceString,

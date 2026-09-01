@@ -27,6 +27,7 @@ impl PlayerKeypairWasm{
     }
 
     /// Include any delegating public key in `player_public_info` for back certification
+    #[cfg(feature="prover")]
     pub fn prove_player(
         &self, player_public_info: &[u8],
     ) -> Vec<u8> /* PlayerHello */ {
@@ -45,6 +46,7 @@ impl PlayerKeypairWasm{
     }
 
     /// Produce a `RevealMessage` (reveal token + ZK proof) for a single masked card.
+    #[cfg(feature="prover")]
     pub fn prove_reveal(
         &self, masked_card_bytes: &[u8],
     ) -> ResultWasm<Vec<u8>> {
@@ -129,6 +131,7 @@ impl AggregatedPublicKeys {
         self.serialize_to_vec().unwrap()
     }
 
+    #[cfg(feature="prover")]
     #[wasm_bindgen(js_name="shuffle_and_remask")]
     pub fn wasm_shuffle_and_remask(
         &self, sk: &PlayerKeypairWasm, deck: &MaskedCards,

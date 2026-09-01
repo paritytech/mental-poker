@@ -1,4 +1,5 @@
 pub mod proof;
+#[cfg(feature="prover")]
 pub mod prover;
 
 #[cfg(test)]
@@ -8,10 +9,9 @@ const NAME: &'static [u8] = b"Chaum-Pedersen";
 const ERROR: &'static str = "Chaum-Pedersen";
 const LENGTH_ERROR: &'static str = "Chaum-Pedersen, wrong statemeent length";
 
-use crate::{IntoTranscript, transcript::Transcript, error::*};
-use crate::zkp::ArgumentOfKnowledge;
+use crate::{IntoTranscript, transcript::Transcript, error::*, zkp::*};
 use ark_ec::{CurveGroup,PrimeGroup};
-use ark_std::{array::from_ref as one, marker::PhantomData, rand::{Rng, CryptoRng}, vec::Vec};
+use ark_std::{array::from_ref as one, marker::PhantomData, vec::Vec};
 
 pub struct DLEquality<'a, C: CurveGroup> {
     _group: PhantomData<&'a C>,
@@ -73,6 +73,7 @@ impl<'a, C: CurveGroup> ArgumentOfKnowledge for DLEquality<'a, C> {
     type Witness = Witness<C>;
     type Proof = proof::Proof<C>;
 
+    #[cfg(feature="prover")]
     fn prove<R: Rng+CryptoRng>(
         rng: &mut R,
         common_reference_string: &Self::CommonReferenceString,

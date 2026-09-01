@@ -1,12 +1,15 @@
 pub mod proof;
+#[cfg(feature="prover")]
 pub mod prover;
 pub mod tests;
 
-use crate::{error::*, IntoTranscript};
-use crate::vector_commitment::HomomorphicCommitmentScheme;
-use crate::zkp::{arguments::scalar_powers, ArgumentOfKnowledge};
+use crate::{
+    IntoTranscript, error::*, 
+    vector_commitment::HomomorphicCommitmentScheme,
+    zkp::{*, arguments::scalar_powers}, 
+};
 use ark_ff::Field;
-use ark_std::{marker::PhantomData, vec::Vec, rand::{Rng, CryptoRng}};
+use ark_std::{marker::PhantomData, vec::Vec};
 
 pub struct ZeroValueArgument<'a, F, Comm>
 where
@@ -27,6 +30,7 @@ where
     type Witness = Witness<'a, Scalar>;
     type Proof = proof::Proof<Scalar, Comm>;
 
+    #[cfg(feature="prover")]
     fn prove<R: Rng+CryptoRng>(
         rng: &mut R,
         common_reference_string: &Self::CommonReferenceString,

@@ -1,4 +1,5 @@
 pub mod proof;
+#[cfg(feature="prover")]
 pub mod prover;
 mod tests;
 
@@ -6,10 +7,10 @@ use crate::{
     IntoTranscript, error::*,
     homomorphic_encryption::HomomorphicEncryptionScheme,
     vector_commitment::HomomorphicCommitmentScheme,
-    zkp::ArgumentOfKnowledge,
+    zkp::*,
 };
 use ark_ff::Field;
-use ark_std::{marker::PhantomData, vec::Vec, rand::{Rng,CryptoRng}};
+use ark_std::{marker::PhantomData, vec::Vec};
 
 pub struct MultiExponentiation<
     'a,
@@ -33,6 +34,7 @@ where
     type Witness = Witness<'a, F>;
     type Proof = proof::Proof<F, Enc, Comm>;
 
+    #[cfg(feature="prover")]
     fn prove<R: Rng+CryptoRng>(
         rng: &mut R,
         common_reference_string: &Self::CommonReferenceString,

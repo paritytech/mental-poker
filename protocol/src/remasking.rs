@@ -7,6 +7,7 @@ use crate::{
 
 use ark_ec::CurveGroup;
 use ark_ff::{Field,One,Zero}; 
+#[cfg(feature="prover")]
 use ark_std::{rand::{Rng,CryptoRng}};
 
 use cards_proofs::{
@@ -45,6 +46,7 @@ impl<C: CurveGroup> Remask<C::ScalarField, ElGamal<C>> for MaskedCard<C> {
 }
 
 impl<C: CurveGroup> crate::Parameters<C> {
+    #[cfg(feature="prover")]
     pub fn prove_remask<R: Rng+CryptoRng>(
         &self,
         rng: &mut R,

@@ -30,8 +30,9 @@ byte-unit = "4.0.14"
 anyhow = "1.0.55"
 
 [features]
-default = ["std"]
+default = ["std", "prover"]
 std = ["ark-std/std", "ark-ec/std", "ark-ff/std", "ark-serialize/std", "cards-proofs/std", "cards-deck/std"]
+prover = ["cards-proofs/prover"]
 serde = ["dep:serde"]
 
 [[example]]

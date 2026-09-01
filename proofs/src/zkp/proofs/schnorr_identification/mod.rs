@@ -1,4 +1,5 @@
 pub mod proof;
+#[cfg(feature="prover")]
 pub mod prover;
 
 #[cfg(test)]
@@ -7,11 +8,9 @@ mod test;
 const NAME: &'static [u8] = b"Schnorr Identification";
 const ERROR: &'static str = "Schnorr Identification";
 
-use crate::{IntoTranscript, error::*};
-use crate::zkp::ArgumentOfKnowledge;
+use crate::{IntoTranscript, error::*, zkp::*};
 use ark_ec::{CurveGroup,PrimeGroup};
 use ark_std::marker::PhantomData;
-use ark_std::rand::{Rng, CryptoRng};
 
 pub struct SchnorrIdentification<C: CurveGroup> {
     _group: PhantomData<C>,
@@ -29,6 +28,7 @@ impl<C: CurveGroup> ArgumentOfKnowledge for SchnorrIdentification<C> {
     type Witness = Witness<C>;
     type Proof = proof::Proof<C>;
 
+    #[cfg(feature="prover")]
     fn prove<R: Rng+CryptoRng>(
         system_rng: &mut R,
         common_reference_string: &Self::CommonReferenceString,
