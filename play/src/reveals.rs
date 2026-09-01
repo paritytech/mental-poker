@@ -49,6 +49,7 @@ impl Valid for AccumulateReveals {
 }
 
 impl AccumulateReveals {
+    #[cfg(feature="prover")]
     pub fn prove_reveal(
         &self,
         sk: &PlayerKeypair,
@@ -69,6 +70,7 @@ impl AccumulateReveals {
 #[cfg(feature="wasm")]
 #[wasm_bindgen]
 impl AccumulateReveals {
+    #[cfg(feature="prover")]
     #[wasm_bindgen(js_name="prove_reveal")]
     pub fn prove_reveal_wasm(
         &self,

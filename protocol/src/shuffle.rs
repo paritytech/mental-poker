@@ -3,11 +3,15 @@ use super::{
     Parameters, setup::mid_factor,
     error::CardResult,
     Scalar, keys::*,
-    MaskedCard, remasking::Remask, 
+    MaskedCard,
 };
+#[cfg(feature="prover")]
+use super::remasking::Remask;
 
 use ark_ec::{AffineRepr,CurveGroup};
-use ark_std::{borrow::{ToOwned}, io::{Read}, ops::Deref, vec::Vec, Zero, rand::{Rng,CryptoRng}, UniformRand};
+use ark_std::{borrow::{ToOwned}, io::{Read}, ops::Deref, vec::Vec};
+#[cfg(feature="prover")]
+use ark_std::{Zero, rand::{Rng,CryptoRng}, UniformRand};
 
 use ark_serialize::{CanonicalSerialize,CanonicalDeserialize,SerializationError,Compress,Validate,Valid};
 
@@ -17,10 +21,11 @@ use ark_serialize::{CompressedChecked};
 #[cfg(feature="serde")]
 use serde::{Serialize, Deserialize};
 
+#[cfg(feature="prover")]
+use cards_proofs::utils::permutation::Permutation;
 use cards_proofs::{
     error::CryptoError,
     homomorphic_encryption::el_gamal,
-    utils::permutation::Permutation,
     vector_commitment::{
         pedersen::PedersenCommitment,
         // HomomorphicCommitmentScheme,
@@ -74,6 +79,7 @@ impl<C: CurveGroup> Parameters<C> {
     ///
     /// We suggest preparing cards using `zero_mask`, instead of kinda
     /// pointless the `mask` function.
+    #[cfg(feature="prover")]
     pub fn raw_shuffle_and_remask<R: Rng+CryptoRng>(
         &self,
         rng: &mut R,
@@ -227,6 +233,7 @@ impl<C: CurveGroup> ShuffleMessage<C> {
 const SHUFFLE_RNG_SEED: &'static [u8] = b"Shuffle Proof";
 
 impl<'p,C: CurveGroup> AggregatedPublicKeys<'p,C> {
+    #[cfg(feature="prover")]
     pub fn shuffle_and_remask<R: Rng+CryptoRng>( // shuffle_and_remask
         &self,
         rng: &mut R,
@@ -305,6 +312,7 @@ impl<'p,C: CurveGroup> AccumulateShuffles<'p,C> {
     pub fn is_completed(&self) -> bool { self.remaining_key().is_zero() }
 
     // Should this apply our own shuffle?
+    #[cfg(feature="prover")]
     pub fn do_shuffle<R: Rng+CryptoRng>( // shuffle_and_remask
         &mut self,
         rng: &mut R,

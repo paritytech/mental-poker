@@ -21,6 +21,7 @@ impl AggregatedPublicKeys {
     /// Shuffle cards and produce proof using system randomness
     ///
     /// Verified using `verify_shuffle`
+    #[cfg(feature="prover")]
     pub fn shuffle_and_remask(
         &self, sk: &PlayerKeypair, deck: &[MaskedCard],
     ) -> CardResult<ShuffleMessage> {
@@ -76,6 +77,7 @@ impl Valid for AccumulateShuffles {
     }
 }
 impl AccumulateShuffles {
+    #[cfg(feature="prover")]
     pub fn do_shuffle(
         &mut self, sk: &PlayerKeypair,
     ) -> CardResult<ShuffleMessage> {
@@ -99,6 +101,7 @@ impl AccumulateShuffles {
 #[cfg(feature="wasm")]
 #[wasm_bindgen]
 impl AccumulateShuffles {
+    #[cfg(feature="prover")]
     #[wasm_bindgen(js_name="do_shuffle")]
     pub fn do_shuffle_wasm(
         &mut self, sk: &PlayerKeypairWasm,

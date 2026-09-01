@@ -82,6 +82,7 @@ impl<C: CurveGroup> Parameters<C> {
         Ok(self.player_from_secret(sk))
     }
 
+    #[cfg(feature="prover")]
     pub fn prove_key_ownership<R: Rng+CryptoRng>(
         &self,
         system_rng: &mut R,
@@ -115,6 +116,7 @@ impl<C: CurveGroup> Parameters<C> {
     }
 
     /// Include any delegating public key in `player_public_info` for back certification
+    #[cfg(feature="prover")]
     pub fn prove_player<R: Rng+CryptoRng>(
         &self,
         system_rng: &mut R,
@@ -126,6 +128,7 @@ impl<C: CurveGroup> Parameters<C> {
     }
 
     /// Include any delegating public key in `player_public_info` for back certification
+    #[cfg(feature="prover")]
     pub fn generate_player<R: Rng+CryptoRng>(
         &self,
         system_rng: &mut R,
